@@ -75,6 +75,8 @@ if [ -f /etc/ssh/sshd_config ]; then
   sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config || true
   pkill -HUP sshd >/dev/null 2>&1 || true
 fi
+mkdir -p /srv/backups/.horus_state
+touch /srv/backups/.horus_state/open_critical_ports.applied
 """,
     "weak_credentials": """
 set -eu
@@ -92,6 +94,8 @@ mkdir -p /srv/backups
   echo "user=${user_pw}"
 } > /srv/backups/.horus_rotated_credentials.txt
 chmod 600 /srv/backups/.horus_rotated_credentials.txt || true
+mkdir -p /srv/backups/.horus_state
+touch /srv/backups/.horus_state/weak_credentials.applied
 """,
     "telnet_open": """
 set -eu
@@ -101,6 +105,8 @@ fi
 pkill -x in.telnetd >/dev/null 2>&1 || true
 pkill -x telnetd >/dev/null 2>&1 || true
 pkill -x inetd >/dev/null 2>&1 || true
+mkdir -p /srv/backups/.horus_state
+touch /srv/backups/.horus_state/telnet_open.applied
 """,
     "smb_v1_enabled": """
 set -eu
@@ -113,6 +119,8 @@ if [ -f /etc/samba/smb.conf ]; then
   sed -i 's/^[[:space:]]*guest ok.*/  guest ok = no/' /etc/samba/smb.conf || true
   pkill -HUP smbd >/dev/null 2>&1 || true
 fi
+mkdir -p /srv/backups/.horus_state
+touch /srv/backups/.horus_state/smb_v1_enabled.applied
 """,
 }
 

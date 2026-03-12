@@ -4,7 +4,10 @@
 // EN: Frontend controller for network discovery and deep scan views.
 // do.
 
-const API_BASE = window.location.origin;
+let API_BASE = window.location.origin;
+if (API_BASE.includes('5500') || API_BASE.includes('file://') || API_BASE === 'null' || window.location.protocol === 'file:') {
+    API_BASE = 'http://localhost:3000';
+}
 const API_SCAN = `${API_BASE}/api/simulations`;
 const API_DISCOVER = `${API_BASE}/api/simulations/discover`;
 const API_NETWORK = `${API_BASE}/api/simulations/network`;
@@ -150,7 +153,7 @@ function isValidSubnet(subnet) {
 
 // ── Loading / Carga ──
 function showLoading(text, details) {
-    loadingText.textContent = text || 'Escaneando...';
+    loadingText.textContent = text || 'Remediando brechas de seguridad...';
     loadingDetails.innerHTML = details || '';
     loadingOverlay.classList.add('active');
 }
@@ -376,8 +379,11 @@ async function checkAIStatus(silent = false) {
         aiServiceReady = Boolean(payload.ai_available);
         aiAnalysisReady = aiServiceReady || Boolean(payload.analyze_fallback_available);
 
+        const providerLabel = (payload.ai_provider || 'openai').charAt(0).toUpperCase()
+            + (payload.ai_provider || 'openai').slice(1);
+
         if (aiServiceReady) {
-            updateAIStatusBadge('online', 'IA: online');
+            updateAIStatusBadge('online', `IA: ${providerLabel}`);
         } else if (aiAnalysisReady) {
             updateAIStatusBadge('offline', 'IA: modo local');
         } else {
@@ -385,10 +391,12 @@ async function checkAIStatus(silent = false) {
         }
 
         if (!silent) {
+            const provider = (payload.ai_provider || 'openai').toUpperCase();
+            const model = payload.ai_model || 'desconocido';
             const aiLine = aiServiceReady
-                ? 'OpenAI activo: analisis y chat generativo disponibles.'
+                ? `IA activa (${provider} — modelo: ${model}): analisis y chat generativo disponibles.`
                 : aiAnalysisReady
-                    ? 'OpenAI no configurado: define OPENAI_API_KEY en BACKEND/api/.env y reinicia Node API. Mientras tanto se usa modo local.'
+                    ? `IA (${provider}) no configurada: revisa .env y reinicia Node API. Mientras tanto se usa modo local.`
                     : 'IA no disponible.';
             const analyzeLine = payload.analyze_fallback_available
                 ? 'Analisis fallback local: activo.'
@@ -611,11 +619,11 @@ function addAIChatHistory(role, content) {
 
     aiChatHistory.push({
         role: safeRole,
-        content: safeContent.slice(0, 2000)
+        content: safeContent.slice(0, 4000)
     });
 
-    if (aiChatHistory.length > 12) {
-        aiChatHistory = aiChatHistory.slice(-12);
+    if (aiChatHistory.length > 24) {
+        aiChatHistory = aiChatHistory.slice(-24);
     }
 }
 
@@ -798,7 +806,7 @@ async function handleAIUserMessage(rawMessage) {
             '- descargar reporte ejecutivo ultima<br>' +
             '- enviar reporte ejecutivo 12 a correo@dominio.com<br>' +
             '- enviar reporte ejecutivo ultima a correo@dominio.com<br>' +
-            '- faq (preguntas frecuentes de la aplicacion)<br>- pregunta libre (ej: "que recomiendas endurecer primero?")'
+            '- faq (preguntas frecuentes de la aplicacion)<br>- traduce al ingles o al espanol cualquier explicacion<br>- pregunta libre (ej: "que recomiendas endurecer primero?")'
         );
         return;
     }
@@ -899,7 +907,7 @@ async function bootstrapAIChat() {
 
     appendAIMessage(
         'system',
-        'Prueba con: "estado ia", "faq", "historial", "analiza ultima", "descargar reporte ejecutivo ultima" o "enviar reporte ejecutivo ultima a correo@dominio.com".'
+        'Prueba con: "estado ia", "faq", "historial", "analiza ultima", "traduce al ingles el ultimo analisis", "descargar reporte ejecutivo ultima" o "enviar reporte ejecutivo ultima a correo@dominio.com".'
     );
 
     if (!hasActiveSession()) {
@@ -1430,24 +1438,25 @@ async function refreshUnifiedMonitor({ silent = false } = {}) {
 async function runRemediationAction(action) {
     if (!remediationOutput) return;
 
+    const isExecuteAction = action === 'execute';
     remediationOutput.textContent = 'Procesando...';
+
+    if (isExecuteAction) {
+        showLoading('Remediando brechas de seguridad...', 'Aplicando blindaje y validando controles del laboratorio');
+    }
 
     try {
         if (action === 'preview') {
-            // ── PREVIEW: return all vulnerabilities grouped by ID ────────────
-            const response = await apiFetch(`${API_V2}/remediation/preview-all`);
+            const response = await apiFetch(API_V2 + '/remediation/preview-all');
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(payload?.detail || payload?.error || `Error HTTP ${response.status}`);
+                throw new Error(payload?.detail || payload?.error || ('Error HTTP ' + response.status));
             }
             remediationOutput.textContent = JSON.stringify(payload, null, 2);
-
         } else {
-            // ── EXECUTE: remediate ALL findings, reset score, re-scan ────────
-            // Identify the IP that was last scanned so we only touch that lab.
             const scannedIp = targetInput?.value?.trim() || null;
 
-            const response = await apiFetch(`${API_V2}/remediate-all`, {
+            const response = await apiFetch(API_V2 + '/remediate-all', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1458,36 +1467,40 @@ async function runRemediationAction(action) {
             });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(payload?.detail || payload?.error || `Error HTTP ${response.status}`);
+                throw new Error(payload?.detail || payload?.error || ('Error HTTP ' + response.status));
             }
 
-            remediationOutput.textContent =
-                `Remediacion completada:\n` +
-                `  Total findings: ${payload.total ?? '?'}\n` +
-                `  Ejecutados:     ${payload.executed ?? '?'}\n` +
-                `  Omitidos:       ${payload.skipped ?? '?'}\n\n` +
-                JSON.stringify(payload.results ?? [], null, 2);
+            remediationOutput.textContent = `Remediacion completada:
+  Total findings: ${payload.total ?? '?'}
+  Ejecutados:     ${payload.executed ?? '?'}
+  Omitidos:       ${payload.skipped ?? '?'}
 
-            // Refresh unified monitor (score should now be 0)
+${JSON.stringify(payload.results ?? [], null, 2)}`;
+
             await refreshUnifiedMonitor({ silent: true });
 
-            // Auto relaunch deep scan so the UI reflects the fixed surface
             if (scannedIp) {
                 setTimeout(() => {
                     remediationOutput.textContent += '\n\nRe-escaneando objetivo para verificar correcciones...';
-                    launchDeepScan(scannedIp);
+                    launchDeepScan(scannedIp, { loadingTitle: 'Remediando brechas de seguridad...' });
                 }, 1500);
             }
         }
     } catch (error) {
-        remediationOutput.textContent = `Error: ${error.message || 'fallo de remediación'}`;
+        remediationOutput.textContent = 'Error: ' + (error.message || 'fallo de remediacion');
+    } finally {
+        if (isExecuteAction) {
+            hideLoading();
+        }
     }
 }
 
-async function launchDeepScan(target) {
+async function launchDeepScan(target, options = {}) {
     // EN: Deep-scan request lifecycle.
     // do.
-    showLoading('Escaneo profundo en curso...', `Analizando ${target}<br>nmap -A -sV --version-all -sC -O --osscan-guess -T4<br>Esto puede tardar 1-3 minutos`);
+    const loadingTitle = options.loadingTitle || 'Escaneo profundo en curso...';
+    const loadingDetails = options.loadingDetails || `Analizando ${target}<br>nmap -A -sV --version-all -sC -O --osscan-guess -T4<br>Esto puede tardar 1-3 minutos`;
+    showLoading(loadingTitle, loadingDetails);
     hideError();
     try {
         const res = await apiFetch(API_SCAN, {

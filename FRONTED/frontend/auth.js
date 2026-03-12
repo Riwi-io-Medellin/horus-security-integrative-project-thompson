@@ -3,7 +3,10 @@
    ═══════════════════════════════════════════ */
 
 (function () {
-    const API_BASE = window.location.origin;
+    let API_BASE = window.location.origin;
+    if (API_BASE.includes('5500') || API_BASE.includes('file://') || API_BASE === 'null' || window.location.protocol === 'file:') {
+        API_BASE = 'http://localhost:3000';
+    }
     const API_AUTH = `${API_BASE}/api/auth`;
     const API_ADMIN_USERS = `${API_BASE}/api/admin/users`;
 

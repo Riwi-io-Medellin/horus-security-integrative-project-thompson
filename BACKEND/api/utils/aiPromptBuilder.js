@@ -80,7 +80,12 @@ CRITICAL RULES:
 5. Base your analysis on the actual data provided
 6. If no vulnerabilities are found, vulnerabilities array should be empty
 7. Be specific and actionable in recommendations
-8. analysis_confidence should be between 0.0 and 1.0`;
+8. analysis_confidence should be between 0.0 and 1.0
+9. Only report vulnerabilities you are CERTAIN exist for the exact service version detected
+10. Do NOT invent or guess CVE numbers - only reference CVEs you are confident are real
+11. A port being open is NOT by itself a high-severity vulnerability
+12. risk_level HIGH (7-8) or CRITICAL (9-10) requires strong evidence: compromised credentials, confirmed critical CVEs, or dangerous misconfigurations
+13. If unsure about a vulnerability, classify it as LOW severity and lower your analysis_confidence`;
 }
 
 /**

@@ -2,10 +2,11 @@ import { analyzeWithAI, chatWithAIAgent as chatWithAIAgentService } from "../ser
 import { generatePDFReport, validateReportData } from "../services/pdf.service.js";
 import {
     getSimulationById,
+    getSimulationsByUser,
     isPersistenceEnabled,
     saveAIAnalysis
 } from "../services/db.service.js";
-import { isOpenAIConfigured } from "../config/openai.config.js";
+import { isAIConfigured as isOpenAIConfigured, getAIProvider, getAIConfig } from "../config/ai.config.js";
 import { isMailConfigured } from "../config/mail.config.js";
 import { sendEmailMessage } from "../services/email.service.js";
 import fs from "node:fs";
@@ -1871,6 +1872,26 @@ function buildLocalHeuristicAnalysis(rawScanData) {
     };
 }
 
+function shouldUseLocalAiFallback(error) {
+    const message = String(error?.message || "").toLowerCase();
+
+    return [
+        "not configured",
+        "package is missing",
+        "api request failed",
+        "incorrect api key",
+        "invalid api key",
+        "authentication",
+        "unauthorized",
+        "401",
+        "429",
+        "quota",
+        "rate limit",
+        "temporarily unavailable",
+        "timeout"
+    ].some((token) => message.includes(token));
+}
+
 async function analyzeSimulationWithFallback(rawScanData) {
     if (!isOpenAIConfigured()) {
         return {
@@ -1888,7 +1909,7 @@ async function analyzeSimulationWithFallback(rawScanData) {
             source: "openai"
         };
     } catch (error) {
-        if (error.message.includes("not configured") || error.message.includes("package is missing")) {
+        if (shouldUseLocalAiFallback(error)) {
             return {
                 analysis: buildLocalHeuristicAnalysis(rawScanData),
                 fallbackMode: true,
@@ -1952,6 +1973,15 @@ function buildFAQReply(message, simulationContext) {
     const contextLine = simulationContext
         ? "Contexto activo: simulacion #" + simulationContext.id + " sobre " + (simulationContext.target_ip || "objetivo no especificado") + "."
         : "No hay simulacion activa; puedes usar 'historial' para cargar contexto.";
+
+    if (/traduc|translate|ingles|english|espanol|español|spanish/.test(normalized)) {
+        return [
+            "Traduccion en chat HORUS:",
+            "- Puedes pedir: 'traduce al ingles el ultimo analisis' o 'translate this explanation to spanish'.",
+            "- Si hay simulacion activa, usare su contexto tecnico para mantener precision.",
+            contextLine
+        ].join("\n");
+    }
 
     if (/faq|preguntas frecuentes|que puedes hacer|como funciona horus|que hace horus/.test(normalized)) {
         return [
@@ -2033,6 +2063,28 @@ function buildOfflineChatReply(message, simulationContext, scanPayload, analysis
         );
     } else {
         lines.push("No tengo contexto de simulacion cargado. Usa \"historial\" para ver IDs y trabajar sobre una simulacion.");
+    }
+
+    if (/traduc|translate|ingles|english|espanol|español|spanish/.test(normalized)) {
+        if (simulationContext) {
+            const english = [
+                "English summary:",
+                "Simulation #" + simulationContext.id + " on " + (simulationContext.target_ip || "unknown target") + ".",
+                "Open ports: " + (simulationContext.open_ports_count ?? 0) + ".",
+                "Vulnerability findings: " + (simulationContext.vulnerabilities_count ?? 0) + ".",
+                "Credential alerts: " + (simulationContext.credential_alerts_count ?? 0) + "."
+            ].join("\n");
+            const spanish = [
+                "Resumen en espanol:",
+                "Simulacion #" + simulationContext.id + " sobre " + (simulationContext.target_ip || "objetivo desconocido") + ".",
+                "Puertos abiertos: " + (simulationContext.open_ports_count ?? 0) + ".",
+                "Hallazgos de vulnerabilidad: " + (simulationContext.vulnerabilities_count ?? 0) + ".",
+                "Alertas de credenciales: " + (simulationContext.credential_alerts_count ?? 0) + "."
+            ].join("\n");
+            lines.push(/english|ingles/.test(normalized) ? english : spanish);
+        } else {
+            lines.push("Puedo traducir respuestas entre espanol e ingles, pero necesito una simulacion activa o texto a traducir.");
+        }
     }
 
     if (/reporte|pdf|documento|ejecutivo|descargar/.test(normalized)) {
@@ -2341,8 +2393,28 @@ function buildChatSimulationContext(simulation) {
     const credentialTests = Array.isArray(scanPayload.credential_tests) ? scanPayload.credential_tests : [];
 
     const services = openPorts
-        .slice(0, 8)
-        .map((port) => `${port.port}/${port.protocol || "tcp"} ${port.service || ""}`.trim());
+        .slice(0, 20)
+        .map((port) => (String(port.port) + "/" + (port.protocol || "tcp") + " " + (port.service || "")).trim());
+
+    const vulnerabilitiesPreview = vulnerabilities
+        .slice(0, 12)
+        .map((item) => ({
+            script_id: item.script_id || null,
+            severity: item.severity || null,
+            affected_service: item.affected_service || null,
+            output: String(item.output || item.description || "").slice(0, 220)
+        }));
+
+    const credentialFindingsPreview = credentialTests
+        .filter((item) => String(item?.status || "").toLowerCase() === "credentials_found")
+        .slice(0, 10)
+        .map((item) => ({
+            service: item.service || null,
+            username: item?.details?.user || item.found_username || null,
+            risk_score: item.risk_score ?? null
+        }));
+
+    const storedAnalysis = extractStoredAiAnalysis(simulation);
 
     return {
         id: simulation.id,
@@ -2359,8 +2431,43 @@ function buildChatSimulationContext(simulation) {
         credential_alerts_count: credentialTests.filter(
             (item) => String(item?.status || "").toLowerCase() === "credentials_found"
         ).length,
-        services
+        services,
+        vulnerabilities_preview: vulnerabilitiesPreview,
+        credential_findings_preview: credentialFindingsPreview,
+        ai_summary: storedAnalysis
+            ? {
+                overall_risk_score: storedAnalysis.overall_risk_score ?? null,
+                risk_level: storedAnalysis.risk_level || null,
+                confidence: storedAnalysis.analysis_confidence ?? null,
+                executive_summary: String(storedAnalysis.executive_summary || "").slice(0, 500)
+            }
+            : null
     };
+}
+
+async function buildRecentSimulationsContext(userId, currentSimulationId = null) {
+    const parsedUserId = parsePositiveInt(userId);
+    if (!parsedUserId || !isPersistenceEnabled()) {
+        return [];
+    }
+
+    try {
+        const rows = await getSimulationsByUser(parsedUserId);
+        return (Array.isArray(rows) ? rows : [])
+            .filter((item) => !currentSimulationId || Number(item.id) !== Number(currentSimulationId))
+            .slice(0, 6)
+            .map((item) => ({
+                id: item.id,
+                scan_type: item.scan_type || null,
+                target_ip: item.target_ip || null,
+                target_subnet: item.target_subnet || null,
+                status: item.status || null,
+                created_at: item.created_at || null,
+                scan_time_seconds: item.scan_time_seconds ?? null
+            }));
+    } catch {
+        return [];
+    }
 }
 
 export async function chatWithAIAgent(req, res) {
@@ -2376,8 +2483,10 @@ export async function chatWithAIAgent(req, res) {
     const simulationId = parsePositiveInt(req.body?.simulation_id || req.body?.simulationId);
     const conversation = Array.isArray(req.body?.conversation) ? req.body.conversation : [];
     const userContext = req.body?.context && typeof req.body.context === "object" ? req.body.context : {};
+    const requesterUserId = parsePositiveInt(req.headers["x-user-id"] || req.body?.user_id || req.body?.userId);
 
     let simulationContext = null;
+    let recentSimulationsContext = [];
     let scanPayload = null;
     let analysisResult = null;
 
@@ -2405,9 +2514,14 @@ export async function chatWithAIAgent(req, res) {
         }
     }
 
+    if (requesterUserId) {
+        recentSimulationsContext = await buildRecentSimulationsContext(requesterUserId, simulationId);
+    }
+
     const mergedContext = {
         ...userContext,
-        ...(simulationContext ? { simulation: simulationContext } : {})
+        ...(simulationContext ? { simulation: simulationContext } : {}),
+        ...(recentSimulationsContext.length > 0 ? { recent_simulations: recentSimulationsContext } : {})
     };
 
     const aiConfigured = isOpenAIConfigured();
@@ -2453,7 +2567,7 @@ export async function chatWithAIAgent(req, res) {
             context_attached: Boolean(simulationContext)
         });
     } catch (error) {
-        if (error.message.includes("not configured") || error.message.includes("package is missing")) {
+        if (shouldUseLocalAiFallback(error)) {
             return res.status(200).json({
                 success: true,
                 reply: buildOfflineChatReply(message, simulationContext, scanPayload, analysisResult),
@@ -2477,17 +2591,21 @@ export async function getAIStatus(req, res) {
     try {
         const aiConfigured = isOpenAIConfigured();
         const mailConfigured = isMailConfigured();
+        const provider = getAIProvider();
+        const aiConfig = getAIConfig();
 
         return res.status(200).json({
             success: true,
             ai_available: aiConfigured,
+            ai_provider: provider,
+            ai_model: aiConfig.model,
             analyze_fallback_available: true,
             chat_fallback_available: true,
             mail_available: mailConfigured,
             db_persistence_enabled: isPersistenceEnabled(),
             message: aiConfigured
-                ? "AI service is configured"
-                : "AI service is not configured (OPENAI_API_KEY missing). Set OPENAI_API_KEY in BACKEND/api/.env and restart Node API. Local fallback chat and analysis are enabled."
+                ? `AI service is configured (provider: ${provider}, model: ${aiConfig.model})`
+                : `AI service is not configured (provider: ${provider}). Check .env and restart Node API. Local fallback chat and analysis are enabled.`
         });
     } catch (error) {
         return res.status(500).json({

@@ -185,7 +185,7 @@ function normalizePorts(rawPorts) {
  * - service (VARCHAR 100 NOT NULL)
  * - status (VARCHAR 100 NOT NULL)
  * - found_username (VARCHAR 255 NULL)
- * - found_password (VARCHAR 255 NULL)
+ * - found_password (INT NULL)
  * - risk_score (TINYINT NULL)
  * - created_at (TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
  */

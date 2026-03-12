@@ -716,7 +716,7 @@ export async function createUserByAdmin(
         [
             normalizedEmail,
             normalizedUsername,
-            // normalizedFullName || null,
+            normalizedFullName || null,
             hashPassword(plainPassword),
             activeFlag ? 1 : 0
         ]

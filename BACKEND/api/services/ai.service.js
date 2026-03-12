@@ -1,4 +1,4 @@
-import { getOpenAIClient, getOpenAIConfig, isOpenAIConfigured } from "../config/openai.config.js";
+import { getAIClient, getAIConfig, isAIConfigured, getAIProvider } from "../config/ai.config.js";
 import {
     buildSystemPrompt,
     buildUserPrompt,
@@ -13,8 +13,9 @@ import {
 } from "../utils/dataNormalizer.js";
 
 export async function analyzeWithAI(rawScanData) {
-    if (!isOpenAIConfigured()) {
-        throw new Error("OpenAI is not configured. Please set OPENAI_API_KEY in .env file.");
+    if (!isAIConfigured()) {
+        const provider = getAIProvider();
+        throw new Error(`AI provider (${provider}) is not configured. Check .env file.`);
     }
 
     const basicValidation = validateSimulationData(rawScanData);
@@ -35,42 +36,77 @@ export async function analyzeWithAI(rawScanData) {
     const systemPrompt = buildSystemPrompt();
     const userPrompt = buildUserPrompt(sanitized);
 
-    const openai = await getOpenAIClient();
-    const openaiConfig = getOpenAIConfig();
+    const aiClient = await getAIClient();
+    const aiConfig = getAIConfig();
+    const provider = getAIProvider();
 
     let completion;
 
+    const requestBody = {
+        model: aiConfig.model,
+        temperature: aiConfig.temperature,
+        max_tokens: aiConfig.maxTokens,
+        messages: [
+            {
+                role: "system",
+                content: systemPrompt
+            },
+            {
+                role: "user",
+                content: userPrompt
+            }
+        ]
+    };
+
+    // OpenAI soporta response_format nativo; Ollama lo soporta en modelos recientes
+    if (provider === "openai") {
+        requestBody.response_format = { type: "json_object" };
+    } else {
+        // Reforzar instrucciones para modelos locales: formato JSON + rigor analítico
+        requestBody.messages[0].content += `
+
+IMPORTANT: You MUST respond with ONLY valid JSON. No markdown, no code fences, no extra text.
+
+SCORING METHODOLOGY - You MUST follow this additive scoring system:
+
+Start with overall_risk_score = 0.0 and ADD points ONLY for issues you have confirmed evidence for:
+  +0.5 per open port running an up-to-date, properly configured service
+  +1.5 per service with an outdated version (ONLY if you are CERTAIN the version is outdated)
+  +2.0 per CONFIRMED critical CVE that affects the EXACT version detected (not a nearby version)
+  +1.0 per insecure protocol in use (Telnet, plain FTP, unencrypted HTTP on sensitive ports)
+  +1.5 for dangerous misconfigurations you can confirm from the scan data
+  Cap the final score at 10.0
+
+ANTI-HALLUCINATION RULES:
+- Do NOT invent or guess CVE numbers. If unsure, leave the references array EMPTY.
+- Do NOT assume a service version is vulnerable without certainty. When in doubt, classify as LOW.
+- Do NOT list vulnerabilities you are speculating about. Fewer accurate findings is better than many guesses.
+- If you cannot confirm a specific vulnerability for the exact version shown, do NOT include it.
+- Set analysis_confidence between 0.3-0.5 when you are not fully certain about your findings.
+- Show your reasoning: in each vulnerability description, explain what specific evidence from the scan led you to flag it.`;
+    }
+
     try {
-        completion = await openai.chat.completions.create({
-            model: openaiConfig.model,
-            temperature: openaiConfig.temperature,
-            max_tokens: openaiConfig.maxTokens,
-            messages: [
-                {
-                    role: "system",
-                    content: systemPrompt
-                },
-                {
-                    role: "user",
-                    content: userPrompt
-                }
-            ],
-            response_format: { type: "json_object" }
-        });
+        completion = await aiClient.chat.completions.create(requestBody);
     } catch (apiError) {
-        throw new Error(`OpenAI API request failed: ${apiError.message}`);
+        throw new Error(`${provider} API request failed: ${apiError.message}`);
     }
 
     const rawResponse = completion.choices[0]?.message?.content;
 
     if (!rawResponse) {
-        throw new Error("OpenAI returned an empty response");
+        throw new Error(`${provider} returned an empty response`);
     }
 
     let parsedAnalysis;
 
     try {
-        parsedAnalysis = JSON.parse(rawResponse);
+        // Limpiar respuestas de modelos locales que a veces envuelven JSON en markdown
+        let cleanResponse = rawResponse.trim();
+        if (cleanResponse.startsWith("```")) {
+            cleanResponse = cleanResponse.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+        }
+        parsedAnalysis = JSON.parse(cleanResponse);
     } catch {
         throw new Error("Failed to parse AI analysis response as JSON");
     }
@@ -88,7 +124,7 @@ export async function analyzeWithAI(rawScanData) {
             : [],
         analysis_confidence: parsedAnalysis.analysis_confidence || 0.0,
         generated_at: parsedAnalysis.generated_at || new Date().toISOString(),
-        model_version: openaiConfig.model
+        model_version: aiConfig.model
     };
 
     const aiAnalysisMER = prepareAIAnalysisForStorage(standardAnalysis, normalizedData.simulation.id);
@@ -146,10 +182,12 @@ export async function batchAnalyze(simulationsArray) {
 
 const CHAT_SYSTEM_PROMPT = [
     "Eres HORUS, un agente de ciberseguridad para analizar hallazgos de escaneo de red.",
-    "Responde SIEMPRE en espanol, con tono tecnico claro y accionable.",
-    "Si falta informacion o contexto, dilo explicitamente y sugiere el siguiente paso.",
+    "Responde en el idioma del usuario (espanol o ingles).",
+    "Si el usuario pide traduccion, traduce tu ultima explicacion o la solicitada al idioma pedido.",
+    "Si falta informacion o contexto, dilo explicitamente y sugiere el siguiente paso tecnico.",
     "No inventes resultados de escaneo ni CVEs que no aparezcan en el contexto proporcionado.",
     "Si el usuario pide mitigaciones, entrega acciones priorizadas (inmediatas, corto plazo, mediano plazo).",
+    "Cuando el usuario pida respuestas complejas, entrega: resumen ejecutivo, evidencia tecnica y plan accionable.",
     "Si la pregunta no es de seguridad/escaneo, responde brevemente y redirige al objetivo del proyecto."
 ].join(" ");
 
@@ -159,7 +197,7 @@ function normalizeConversation(conversation) {
     }
 
     return conversation
-        .slice(-8)
+        .slice(-16)
         .map((turn) => {
             const role = String(turn?.role || "").toLowerCase();
             const content = String(turn?.content || "").trim();
@@ -170,7 +208,7 @@ function normalizeConversation(conversation) {
 
             return {
                 role,
-                content: content.slice(0, 2000)
+                content: content.slice(0, 4000)
             };
         })
         .filter(Boolean);
@@ -187,7 +225,7 @@ function safeContextString(context) {
             return null;
         }
 
-        return json.length > 8000 ? `${json.slice(0, 8000)}\n... [context truncated]` : json;
+        return json.length > 20000 ? `${json.slice(0, 20000)}\n... [context truncated]` : json;
     } catch {
         return null;
     }
@@ -200,12 +238,14 @@ export async function chatWithAIAgent({ message, conversation = [], context = nu
         throw new Error("Message is required for AI chat");
     }
 
-    if (!isOpenAIConfigured()) {
-        throw new Error("OpenAI is not configured. Please set OPENAI_API_KEY in .env file.");
+    if (!isAIConfigured()) {
+        const prov = getAIProvider();
+        throw new Error(`AI provider (${prov}) is not configured. Check .env file.`);
     }
 
-    const openai = await getOpenAIClient();
-    const openaiConfig = getOpenAIConfig();
+    const openai = await getAIClient();
+    const openaiConfig = getAIConfig();
+    const provider = getAIProvider();
 
     const contextJson = safeContextString(context);
     const historyMessages = normalizeConversation(conversation);
@@ -220,7 +260,7 @@ export async function chatWithAIAgent({ message, conversation = [], context = nu
         completion = await openai.chat.completions.create({
             model: openaiConfig.model,
             temperature: Math.min(0.7, Math.max(0, openaiConfig.temperature + 0.05)),
-            max_tokens: Math.min(openaiConfig.maxTokens, 1000),
+            max_tokens: Math.min(openaiConfig.maxTokens, 1400),
             messages: [
                 {
                     role: "system",
@@ -234,13 +274,13 @@ export async function chatWithAIAgent({ message, conversation = [], context = nu
             ]
         });
     } catch (apiError) {
-        throw new Error(`OpenAI API request failed: ${apiError.message}`);
+        throw new Error(`${String(provider || "ai").toUpperCase()} API request failed: ${apiError.message}`);
     }
 
     const reply = completion?.choices?.[0]?.message?.content?.trim();
 
     if (!reply) {
-        throw new Error("OpenAI returned an empty chat response");
+        throw new Error(`${String(provider || "ai").toUpperCase()} returned an empty chat response`);
     }
 
     return {
