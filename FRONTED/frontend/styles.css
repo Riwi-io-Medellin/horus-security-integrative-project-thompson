@@ -1421,7 +1421,8 @@ body::after {
 /* ── Recuadro del globo 3D ── */
 .hero {
     position: fixed;
-    left: 0; top: 0;
+    left: 0; 
+    top: 0;
     width: 45vw;
     height: 100vh;
     padding: 0;
@@ -1431,23 +1432,41 @@ body::after {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;  /* título pegado abajo */
+    padding-bottom: 48px;
     gap: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
+    background: transparent;
+    backdrop-filter: none;
     z-index: 50;
 }
 
-.hero__globe-wrap {
-    width: 90%;
-    height: 55vh;
-    border-radius: 8px;
-    margin: 0;
-    position: relative;
+/* Canvas de globo: fondo fijo que cubre todo el panel izquierdo */
+#globeCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 45vw;
+    height: 100vh;
+    z-index: 49;
+    pointer-events: none;
+    display: block;
 }
 
-.hero__title { font-size: 22px; letter-spacing: 8px; margin-top: 20px; }
-.hero__subtitle { font-size: 10px; padding: 0 30px; }
+/* El resto se mantiene igual */
+.hero__title { 
+    position: relative;
+    z-index: 101; 
+    font-size: 22px; 
+    letter-spacing: 8px; 
+    margin-top: 20px; 
+}
+
+.hero__subtitle { 
+    position: relative;
+    z-index: 101;
+    font-size: 10px; 
+    padding: 0 30px; 
+}
 
 .container {
     margin-left: 45vw;
@@ -1455,40 +1474,6 @@ body::after {
     width: 55vw;
     padding: 30px 24px;
 }
-
-.hero__globe-wrap canvas {
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-}
-
-.hero__globe-overlay {
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 3px,
-        rgba(34, 211, 238, 0.012) 3px,
-        rgba(34, 211, 238, 0.012) 4px
-    );
-    pointer-events: none;
-}
-
-.hero__globe-wrap::before,
-.hero__globe-wrap::after {
-    content: '';
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    border-color: var(--accent-cyan);
-    border-style: solid;
-    z-index: 2;
-    pointer-events: none;
-    opacity: 0.8;
-}
-.hero__globe-wrap::before { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
-.hero__globe-wrap::after  { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
 
 /* ── Session bar within fixed hero ── */
 .session-bar {
