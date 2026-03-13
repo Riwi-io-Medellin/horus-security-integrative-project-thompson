@@ -47,6 +47,7 @@ const discoverTime = document.getElementById('discoverTime');
 const discoverCmdText = document.getElementById('discoverCmdText');
 const devicesBody = document.getElementById('devicesBody');
 const devicesEmpty = document.getElementById('devicesEmpty');
+const devicesEmptyText = devicesEmpty?.querySelector('.empty-state__text');
 const devicesTable = document.getElementById('devicesTable');
 
 // Scan
@@ -968,8 +969,17 @@ function renderDiscoveryResults(data) {
     discoverTime.textContent = data.scan_time ? `${data.scan_time}s` : '--';
     discoverCmdText.textContent = data.nmap_command || '--';
 
-    if (Array.isArray(data.warnings) && data.warnings.length > 0) {
-        showError(data.warnings[0]);
+    const warningMessage = Array.isArray(data.warnings) && data.warnings.length > 0
+        ? data.warnings[0]
+        : '';
+    if (warningMessage) {
+        showError(warningMessage);
+    }
+
+    if (devicesEmptyText) {
+        devicesEmptyText.textContent = warningMessage && (!data.devices || data.devices.length === 0)
+            ? `No se encontraron dispositivos activos en la subred. ${warningMessage}`
+            : 'No se encontraron dispositivos activos en la subred';
     }
 
     devicesBody.innerHTML = '';
@@ -1290,6 +1300,10 @@ function renderScanResults(data) {
                 appendAIMessage('system', `Se detecto nueva simulacion #${parsedSimulationId}. Escribe "analiza ultima" para evaluarla con IA.`);
             }
         }
+    }
+
+    if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+        showError(data.warnings[0]);
     }
 
     // Nmap command

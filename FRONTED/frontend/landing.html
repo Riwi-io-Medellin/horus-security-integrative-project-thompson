@@ -120,6 +120,8 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            line-height: 1;
+            text-decoration: none;
         }
 
         .logo span {
@@ -275,6 +277,17 @@
             border-radius: 8px;
             overflow: hidden;
             border: 1px solid rgba(34, 211, 238, 0.2);
+            min-height: 320px;
+            aspect-ratio: 23 / 16;
+        }
+
+        .risk-gif {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+            filter: brightness(0.88) saturate(1.05);
         }
 
         .risk-badge {
@@ -663,7 +676,7 @@
             <div class="hero-stats animate-up delay-4">
                 <div class="stat-item">
                     <span class="stat-val">43%</span>
-                    <span class="stat-lbl">Ataques a PyMEs</span>
+                    <span class="stat-lbl">son ataques a PyMEs</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-val">$200K</span>
@@ -682,14 +695,17 @@
         <div class="container">
             <div class="risk-grid">
                 <div class="risk-visual reveal">
-                    <canvas id="heatCanvas" width="460" height="320"></canvas>
+                    <img class="risk-gif" src="src/images/ataques-mundiales.gif"
+                        alt="Mapa mundial animado de ataques ciberneticos" loading="lazy" decoding="async"
+                        referrerpolicy="no-referrer">
                     <div class="risk-badge">[!] AMENAZA ACTIVA DETECTADA</div>
                 </div>
                 <div class="risk-content">
                     <span class="section-tag reveal">EL RIESGO REAL</span>
                     <h2 class="section-title reveal">¿Su empresa sabe qué tan vulnerable es hoy?</h2>
-                    <p class="reveal">Los sistemas de la <strong>DIAN en Colombia</strong> fueron comprometidos. Si una
-                        institución con todos los recursos fue vulnerada, las PyMEs son el próximo objetivo fácil.</p>
+                    <p class="reveal">En los últimos años, múltiples organizaciones e instituciones han sido
+                        comprometidas por ataques cibernéticos. Si entidades con grandes recursos pueden ser
+                        vulneradas, las PyMEs suelen convertirse en el próximo objetivo fácil.</p>
                     <ul class="risk-list">
                         <li class="reveal"><strong>Pérdida de facturación diaria</strong> mientras el sistema está
                             secuestrado.</li>
@@ -904,40 +920,6 @@
             draw();
         })();
 
-        /* Heatmap Canvas */
-        (function () {
-            const canvas = document.getElementById('heatCanvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const dots = [];
-            for (let i = 0; i < 30; i++) {
-                dots.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    r: Math.random() * 40 + 20,
-                    v: Math.random() * 0.02 + 0.01,
-                    c: Math.random() > 0.7 ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 211, 238, 0.2)'
-                });
-            }
-            function drawHeat() {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                dots.forEach(d => {
-                    const grad = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r);
-                    grad.addColorStop(0, d.c);
-                    grad.addColorStop(1, 'rgba(0,0,0,0)');
-                    ctx.fillStyle = grad;
-                    ctx.beginPath();
-                    ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-                    ctx.fill();
-                    d.x += Math.sin(Date.now() * d.v * 0.1);
-                    d.y += Math.cos(Date.now() * d.v * 0.1);
-                });
-                requestAnimationFrame(drawHeat);
-            }
-            drawHeat();
-        })();
-
         /* Closing Three.js Wave */
         (function () {
             const canvas = document.getElementById('closingCanvas');
@@ -946,15 +928,23 @@
             const camera = new THREE.PerspectiveCamera(75, canvas.offsetWidth / canvas.offsetHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
             renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setSize(canvas.offsetWidth, canvas.offsetHeight);
+            function resizeClosingScene() {
+                const width = canvas.clientWidth || canvas.offsetWidth || 1;
+                const height = canvas.clientHeight || canvas.offsetHeight || 1;
+                renderer.setSize(width, height, false);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            }
+            resizeClosingScene();
 
-            const geometry = new THREE.PlaneGeometry(30, 30, 50, 50);
+            const geometry = new THREE.PlaneGeometry(90, 30, 120, 60);
             const material = new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true, transparent: true, opacity: 0.1 });
             const plane = new THREE.Mesh(geometry, material);
             plane.rotation.x = -Math.PI / 2;
             scene.add(plane);
             camera.position.set(0, 5, 10);
             camera.lookAt(0, 0, 0);
+            window.addEventListener('resize', resizeClosingScene);
 
             function animate() {
                 requestAnimationFrame(animate);

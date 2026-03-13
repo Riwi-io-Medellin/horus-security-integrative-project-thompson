@@ -378,34 +378,48 @@ export function detectLocalNetwork() {
     const interfaces = networkInterfaces();
     const results = [];
 
+    function getInterfacePriority(name, ip, cidr) {
+        let score = 0;
+        if (isPrivateIpv4Value(ip)) score += 100;
+        if (name === "en0") score += 60;
+        else if (name.startsWith("en")) score += 45;
+        else if (name.startsWith("eth") || name.startsWith("wlan")) score += 35;
+        else if (name.startsWith("bridge") || name.startsWith("docker") || name.startsWith("vbox")) score -= 20;
+        else if (name.startsWith("utun") || name.startsWith("tun")) score -= 30;
+
+        if (cidr === 24) score += 10;
+        if (cidr > 24 && cidr <= 30) score += 5;
+        return score;
+    }
+
     for (const [name, addrs] of Object.entries(interfaces)) {
         for (const addr of addrs) {
             if (addr.family === "IPv4" && !addr.internal) {
-                // EN: Derive CIDR from netmask.
-                // ES: Derivar CIDR desde la mascara de red.
                 const maskParts = addr.netmask.split(".").map(Number);
                 const cidr = maskParts.reduce((acc, octet) => acc + (octet >>> 0).toString(2).replace(/0/g, "").length, 0);
-
-                // EN: Compute network address (IP AND netmask).
-                // de red (IP AND mascara).
                 const ipParts = addr.address.split(".").map(Number);
                 const netParts = ipParts.map((p, i) => p & maskParts[i]);
                 const network = netParts.join(".");
+                const actualSubnet = `${network}/${cidr}`;
+                const isPrivate = isPrivateIpv4Value(addr.address);
+                const suggestedScanSubnet = isPrivate
+                    ? `${ipParts.slice(0, 3).join(".")}.0/24`
+                    : actualSubnet;
 
                 results.push({
                     interface: name,
                     ip: addr.address,
                     netmask: addr.netmask,
-                    subnet: cidr < 24 ? `${network}/${cidr}` : `${network}/${cidr}`,
-                    // Provide a capped /24 subnet for safe scanning when detected range is too large
-                    scan_subnet: cidr < 24 ? `${ipParts.slice(0, 3).join('.')}.0/24` : `${network}/${cidr}`,
-                    mac: addr.mac || null
+                    subnet: actualSubnet,
+                    scan_subnet: suggestedScanSubnet,
+                    mac: addr.mac || null,
+                    priority: getInterfacePriority(name, addr.address, cidr)
                 });
             }
         }
     }
 
-    return results;
+    return results.sort((a, b) => b.priority - a.priority);
 }
 
 /**
@@ -438,12 +452,128 @@ function extractOpenPortIds(host) {
         .sort((a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10));
 }
 
-export async function discoverHosts(subnet) {
-    const scanPolicy = getScanPolicy();
-    const nmapArgs = [
-        "-sn",
+function extractRawHostsUp(parsed) {
+    const stats = parsed?.nmaprun?.runstats?.[0]?.hosts?.[0]?.$;
+    return Number.parseInt(stats?.up ?? "0", 10) || 0;
+}
+
+function getSubnetSize(subnet) {
+    try {
+        const cidr = new IPCIDR(subnet);
+        return Number(cidr.size);
+    } catch {
+        return null;
+    }
+}
+
+function isPrivateIpv4Value(value) {
+    const ip = String(value || "").split("/")[0].trim();
+    const parts = ip.split(".").map(part => Number.parseInt(part, 10));
+    if (parts.length !== 4 || parts.some(part => !Number.isFinite(part))) {
+        return false;
+    }
+
+    const [first, second] = parts;
+    return first === 10
+        || (first === 172 && second >= 16 && second <= 31)
+        || (first === 192 && second === 168);
+}
+
+function isTargetInsideSubnet(target, subnet) {
+    try {
+        const cidr = new IPCIDR(subnet);
+        return cidr.contains(target);
+    } catch {
+        return false;
+    }
+}
+
+function isSubnetOnLocalInterface(subnet) {
+    const { networkAddress } = getSubnetBoundaries(subnet);
+    if (!networkAddress) {
+        return false;
+    }
+
+    return detectLocalNetwork().some(localNetwork => isTargetInsideSubnet(networkAddress, localNetwork.subnet));
+}
+
+const dockerNetworkSubnetCache = new Map();
+
+async function getDockerNetworkSubnets(networkName) {
+    if (!networkName) {
+        return [];
+    }
+
+    if (dockerNetworkSubnetCache.has(networkName)) {
+        return dockerNetworkSubnetCache.get(networkName);
+    }
+
+    if (!/^[a-zA-Z0-9_.-]+$/.test(networkName)) {
+        return [];
+    }
+
+    return new Promise((resolve) => {
+        exec(
+            `docker network inspect ${networkName}`,
+            { timeout: 5000, maxBuffer: 1024 * 1024 },
+            (error, stdout) => {
+                if (error || !stdout) {
+                    dockerNetworkSubnetCache.set(networkName, []);
+                    return resolve([]);
+                }
+
+                try {
+                    const parsed = JSON.parse(stdout);
+                    const subnets = parsed
+                        .flatMap(entry => entry?.IPAM?.Config || [])
+                        .map(config => config?.Subnet)
+                        .filter(Boolean);
+                    dockerNetworkSubnetCache.set(networkName, subnets);
+                    resolve(subnets);
+                } catch {
+                    dockerNetworkSubnetCache.set(networkName, []);
+                    resolve([]);
+                }
+            }
+        );
+    });
+}
+
+async function resolveScannerRuntime(targetOrSubnet) {
+    const dockerNetwork = getScannerDockerNetwork();
+    const hostRuntimeFlag = " --net=host --cap-add=NET_RAW --cap-add=NET_ADMIN";
+
+    if (!dockerNetwork) {
+        return {
+            dockerNetwork: null,
+            runtimeNetworkFlag: hostRuntimeFlag,
+            warning: null
+        };
+    }
+
+    const dockerSubnets = await getDockerNetworkSubnets(dockerNetwork);
+    const targetAddress = String(targetOrSubnet || "").includes("/")
+        ? getSubnetBoundaries(targetOrSubnet).networkAddress || String(targetOrSubnet).split("/")[0]
+        : String(targetOrSubnet || "").trim();
+
+    if (dockerSubnets.length > 0 && targetAddress && !dockerSubnets.some(subnet => isTargetInsideSubnet(targetAddress, subnet))) {
+        return {
+            dockerNetwork,
+            runtimeNetworkFlag: hostRuntimeFlag,
+            warning: `SCANNER_DOCKER_NETWORK=${dockerNetwork} no cubre ${targetOrSubnet}; se usara la red del host para este escaneo.`
+        };
+    }
+
+    return {
+        dockerNetwork,
+        runtimeNetworkFlag: ` --network=${dockerNetwork}`,
+        warning: null
+    };
+}
+
+function buildDiscoveryArgs(scanPolicy, mode = "hybrid") {
+    const baseArgs = [
         "-n",
-        "-PR",
         "-T4",
         `--max-retries ${scanPolicy.nmap_discovery_max_retries}`,
         `--min-hostgroup ${scanPolicy.nmap_discovery_min_hostgroup}`,
@@ -451,15 +581,33 @@ export async function discoverHosts(subnet) {
         `--host-timeout ${scanPolicy.nmap_discovery_host_timeout_sec}s`,
         "--reason",
         "-oX -"
-    ].join(" ");
+    ];
 
+    if (mode === "tcp-open-fallback") {
+        return [
+            "-Pn",
+            "--open",
+            "--top-ports 64",
+            ...baseArgs
+        ].join(" ");
+    }
+
+    return [
+        "-sn",
+        "-PE",
+        "-PP",
+        "-PM",
+        "-PS21,22,80,135,139,443,445,3389",
+        "-PA80,443,3389",
+        "-PU53,67,68,123,137,161",
+        ...baseArgs
+    ].join(" ");
+}
+
+async function runDiscoveryPass(subnet, scanPolicy, dockerImage, runtimeNetworkFlag, mode) {
+    const nmapArgs = buildDiscoveryArgs(scanPolicy, mode);
     const nmapCommandDisplay = `nmap ${nmapArgs} ${subnet}`;
-    const dockerNetwork = getScannerDockerNetwork();
-    const dockerImage = getScannerDockerImage();
-    const discoveryNetworkFlags = dockerNetwork
-        ? `--network=${dockerNetwork}`
-        : "--net=host --cap-add=NET_RAW --cap-add=NET_ADMIN";
-    const cmd = `docker run --rm --memory="512m" --cpus="1" ${discoveryNetworkFlags} ${dockerImage} nmap ${nmapArgs} ${subnet}`;
+    const cmd = `docker run --rm --memory="512m" --cpus="1"${runtimeNetworkFlag} ${dockerImage} nmap ${nmapArgs} ${subnet}`;
 
     let stdout = "";
     try {
@@ -469,16 +617,58 @@ export async function discoverHosts(subnet) {
         });
         stdout = result.stdout;
     } catch (error) {
-        console.error(`[DISCOVERY ERROR] Command failed: ${error.message}`);
-        console.error(`[DISCOVERY STDERR] ${error.stderr || "No stderr output"}`);
-        throw new Error(`Network discovery failed: ${error.message}`);
+        console.error(`[DISCOVERY ERROR][${mode}] Command failed: ${error.message}`);
+        console.error(`[DISCOVERY STDERR][${mode}] ${error.stderr || "No stderr output"}`);
+        throw new Error(`Network discovery failed (${mode}): ${error.message}`);
     }
 
     try {
         const parsed = await parseStringPromise(stdout);
+        return { parsed, nmapCommandDisplay };
+    } catch (parseError) {
+        throw new Error(`Failed to parse discovery results (${mode}): ${parseError.message}`);
+    }
+}
+
+export async function discoverHosts(subnet) {
+    const scanPolicy = getScanPolicy();
+    const dockerImage = getScannerDockerImage();
+    const runtimeConfig = await resolveScannerRuntime(subnet);
+    const warnings = runtimeConfig.warning ? [runtimeConfig.warning] : [];
+    const executedCommands = [];
+
+    const primaryPass = await runDiscoveryPass(
+        subnet,
+        scanPolicy,
+        dockerImage,
+        runtimeConfig.runtimeNetworkFlag,
+        "hybrid"
+    );
+    let parsed = primaryPass.parsed;
+    executedCommands.push(primaryPass.nmapCommandDisplay);
+
+    const subnetSize = getSubnetSize(subnet);
+    if (extractRawHostsUp(parsed) === 0 && subnetSize != null && subnetSize <= 64) {
+        const fallbackPass = await runDiscoveryPass(
+            subnet,
+            scanPolicy,
+            dockerImage,
+            runtimeConfig.runtimeNetworkFlag,
+            "tcp-open-fallback"
+        );
+        executedCommands.push(fallbackPass.nmapCommandDisplay);
+
+        if (extractRawHostsUp(fallbackPass.parsed) > 0) {
+            parsed = fallbackPass.parsed;
+            warnings.push("La deteccion por ping no encontro hosts; se recuperaron resultados con un barrido por puertos abiertos.");
+        } else {
+            warnings.push("No se detectaron hosts ni por ping ni por el barrido de puertos abiertos del fallback.");
+        }
+    }
+
+    try {
         const hosts = Array.isArray(parsed.nmaprun?.host) ? parsed.nmaprun.host : [];
         const { networkAddress, broadcastAddress } = getSubnetBoundaries(subnet);
-        const warnings = [];
 
         const rawDevices = hosts
             .filter(h => h?.status?.[0]?.$?.state === "up")
@@ -504,8 +694,6 @@ export async function discoverHosts(subnet) {
                 return false;
             }
 
-            // EN: Skip network/broadcast addresses to reduce obvious noise.
-            // te.
             if (networkAddress && device.ip === networkAddress) {
                 return false;
             }
@@ -526,10 +714,6 @@ export async function discoverHosts(subnet) {
             return device;
         });
 
-        // EN: In tethering/NAT setups (e.g. mobile hotspot), gateways may answer
-        // EN: with many reset-like responses that look like fake "up" hosts.
-        // der
-        // hosts "up" falsos.
         const resetLikeCount = devices.filter(d => isResetLikeReason(d.reason)).length;
         const unresolvedCount = devices.filter(d => !d.mac && !d.hostname).length;
         const likelyProxyResponses = devices.length >= 4
@@ -547,12 +731,20 @@ export async function discoverHosts(subnet) {
         const stats = parsed.nmaprun?.runstats?.[0]?.hosts?.[0]?.$;
         const scanInfo = parsed.nmaprun?.$;
         const elapsed = extractNmapElapsed(parsed);
-        const rawHostsUp = Number.parseInt(stats?.up ?? "0", 10) || rawDevices.length;
+        const rawHostsUp = extractRawHostsUp(parsed) || rawDevices.length;
         const hostsTotal = Number.parseInt(stats?.total ?? "0", 10);
 
         if (rawHostsUp > devices.length) {
             warnings.push(`Nmap reporto ${rawHostsUp} hosts activos, pero tras filtrar respuestas ambiguas quedaron ${devices.length}.`);
         }
+
+        if (devices.length === 0 && runtimeConfig.dockerNetwork && isPrivateIpv4Value(subnet) && !isSubnetOnLocalInterface(subnet)) {
+            warnings.push(`La subred ${subnet} no coincide con la red Docker configurada (${runtimeConfig.dockerNetwork}). Si es una red virtual distinta, ajusta SCANNER_DOCKER_NETWORK a la red correcta.`);
+        }
+
+        const nmapCommandDisplay = executedCommands.length > 1
+            ? [executedCommands[0], `FALLBACK: ${executedCommands[1]}`].join("\n")
+            : executedCommands[0];
 
         return {
             subnet,
@@ -591,9 +783,10 @@ export async function runDeepScan(target) {
         "--reason",
         "-oX -"
     ].join(" ");
-    const dockerNetwork = getScannerDockerNetwork();
     const dockerImage = getScannerDockerImage();
-    const runtimeNetworkFlag = dockerNetwork ? ` --network=${dockerNetwork}` : "";
+    const runtimeConfig = await resolveScannerRuntime(target);
+    const runtimeNetworkFlag = runtimeConfig.runtimeNetworkFlag;
+    const scanWarnings = runtimeConfig.warning ? [runtimeConfig.warning] : [];
     const probeCommand = `docker run --rm --memory="1g" --cpus="2"${runtimeNetworkFlag} ${dockerImage} nmap ${probeArgs} ${target}`;
     const probeCommandDisplay = `nmap ${probeArgs} ${target}`;
 
@@ -640,7 +833,8 @@ export async function runDeepScan(target) {
             host_scripts: [],
             vulnerabilities: [],
             credential_tests: [],
-            hydra_commands: []
+            hydra_commands: [],
+            warnings: scanWarnings
         };
     }
 
@@ -704,7 +898,8 @@ export async function runDeepScan(target) {
             host_scripts: [],
             vulnerabilities: [],
             credential_tests: [],
-            hydra_commands: []
+            hydra_commands: [],
+            warnings: scanWarnings
         };
     }
 
@@ -753,7 +948,8 @@ export async function runDeepScan(target) {
             host_scripts: [],
             vulnerabilities: [],
             credential_tests: [],
-            hydra_commands: []
+            hydra_commands: [],
+            warnings: scanWarnings
         };
     }
     // ame.
@@ -1016,6 +1212,7 @@ export async function runDeepScan(target) {
         credential_tests: hydraResults,
         hydra_commands: hydraCommands,
         hydra_policy: hydraPolicy,
-        hydra_auto_stop_reason: hydraAutoStopReason
+        hydra_auto_stop_reason: hydraAutoStopReason,
+        warnings: scanWarnings
     };
 }

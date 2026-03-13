@@ -7,17 +7,48 @@
     const globeCanvas = document.getElementById('globeCanvas');
     if (!globeCanvas) return;
 
-    const W = Math.round(window.innerWidth * 0.45);
-    const H = window.innerHeight;
+    const compactBackgroundQuery = window.matchMedia('(max-width: 1450px)');
+    const mobileBackgroundQuery = window.matchMedia('(max-width: 640px)');
+
+    function getSceneConfig() {
+        const backgroundMode = compactBackgroundQuery.matches;
+        const mobileMode = mobileBackgroundQuery.matches;
+
+        if (backgroundMode) {
+            return {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                cameraZ: mobileMode ? 3.4 : 3.15,
+                groupX: mobileMode ? -0.18 : -0.42,
+                groupY: mobileMode ? -0.52 : -0.34,
+                groupScale: mobileMode ? 1.34 : 1.6,
+                backgroundMode
+            };
+        }
+
+        return {
+            width: Math.round(window.innerWidth * 0.45),
+            height: window.innerHeight,
+            cameraZ: 3.0,
+            groupX: 0,
+            groupY: 0,
+            groupScale: 1,
+            backgroundMode
+        };
+    }
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 1000);
-    camera.position.z = 3.0;
+    const initialConfig = getSceneConfig();
+    const camera = new THREE.PerspectiveCamera(45, initialConfig.width / initialConfig.height, 0.1, 1000);
+    camera.position.z = initialConfig.cameraZ;
 
     const renderer = new THREE.WebGLRenderer({ canvas: globeCanvas, antialias: true, alpha: true });
-    renderer.setSize(W, H);
+    renderer.setSize(initialConfig.width, initialConfig.height, false);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0);
+
+    const globeGroup = new THREE.Group();
+    scene.add(globeGroup);
 
     // Cyber texture: hex grid + continents as circuit traces
     function makeCyberTexture(size) {
@@ -98,7 +129,7 @@
             shininess: 6,
         })
     );
-    scene.add(earth);
+    globeGroup.add(earth);
 
     // Wireframe overlay
     const wireMesh = new THREE.Mesh(
@@ -110,7 +141,7 @@
             opacity: 0.06,
         })
     );
-    scene.add(wireMesh);
+    globeGroup.add(wireMesh);
 
     // Inner glow atmosphere
     const atm = new THREE.Mesh(
@@ -123,7 +154,7 @@
             depthWrite: false,
         })
     );
-    scene.add(atm);
+    globeGroup.add(atm);
 
     // Outer halo
     const halo = new THREE.Mesh(
@@ -136,7 +167,7 @@
             depthWrite: false,
         })
     );
-    scene.add(halo);
+    globeGroup.add(halo);
 
     // Orbital rings (scaled)
     function makeRing(radius, tube, color, opacity, tiltX, tiltZ) {
@@ -146,7 +177,7 @@
         );
         ring.rotation.x = tiltX;
         ring.rotation.z = tiltZ;
-        scene.add(ring);
+        globeGroup.add(ring);
         return ring;
     }
     const ring1 = makeRing(0.86, 0.003, 0x22d3ee, 0.55, Math.PI / 2, 0.3);
@@ -176,7 +207,7 @@
         transparent: true, opacity: 0.85
     });
     const orbPoints = new THREE.Points(orbGeo, orbMat);
-    scene.add(orbPoints);
+    globeGroup.add(orbPoints);
 
     // Lights
     const keyLight = new THREE.DirectionalLight(0x88ddff, 1.2);
@@ -193,6 +224,20 @@
         mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
         mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
     });
+
+    function applySceneLayout() {
+        const config = getSceneConfig();
+        globeCanvas.dataset.backgroundMode = config.backgroundMode ? 'true' : 'false';
+        camera.aspect = config.width / config.height;
+        camera.position.z = config.cameraZ;
+        camera.updateProjectionMatrix();
+        globeGroup.position.set(config.groupX, config.groupY, 0);
+        globeGroup.scale.setScalar(config.groupScale);
+        renderer.setSize(config.width, config.height, false);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    }
+
+    applySceneLayout();
 
     // Animation loop
     let t = 0;
@@ -230,14 +275,9 @@
     }
     animate();
 
-    window.addEventListener('resize', function () {
-        const W2 = Math.round(window.innerWidth * 0.45);
-        const H2 = window.innerHeight;
-        camera.aspect = W2 / H2;
-        camera.updateProjectionMatrix();
-        renderer.setSize(W2, H2);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    });
+    window.addEventListener('resize', applySceneLayout);
+    compactBackgroundQuery.addEventListener?.('change', applySceneLayout);
+    mobileBackgroundQuery.addEventListener?.('change', applySceneLayout);
 
     // ── FAB toggle ──
     const fabBtn = document.getElementById('chatFabBtn');
