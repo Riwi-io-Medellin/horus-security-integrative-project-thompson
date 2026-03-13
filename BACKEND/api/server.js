@@ -83,6 +83,12 @@ app.get("/api/health", (req, res) => {
 
 // Static frontend
 const frontendDirectory = path.join(__dirname, "../../FRONTED/frontend");
+
+// Explicitly serve landing.html on root
+app.get("/", (req, res) => {
+    res.sendFile(path.join(frontendDirectory, "landing.html"));
+});
+
 app.use(express.static(frontendDirectory));
 
 const PORT = process.env.PORT || 3000;

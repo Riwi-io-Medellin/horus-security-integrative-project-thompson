@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
     networks:
       lab_net:
-        ipv4_address: 172.28.10.10
+        ipv4_address: 172.28.10.30
     volumes:
       - lab_data:/srv/labdata
       - lab_backups:/srv/backups
@@ -29,11 +29,11 @@ services:
       - lab-vuln-host
     networks:
       lab_net:
-        ipv4_address: 172.28.10.66
+        ipv4_address: 172.28.10.36
     volumes:
       - lab_data:/srv/labdata
       - lab_backups:/srv/backups
-    command: ["sh", "-lc", "mkdir -p /srv/labdata /srv/backups && tail -f /dev/null"]
+    command: [ "sh", "-lc", "mkdir -p /srv/labdata /srv/backups && tail -f /dev/null" ]
 
 networks:
   lab_net:
