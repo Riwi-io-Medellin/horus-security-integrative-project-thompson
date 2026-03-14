@@ -5,599 +5,1027 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="Horus — Scanner de seguridad con Nmap y Hydra. Escaneo profundo de red, deteccion de SO, servicios y vulnerabilidades.">
-    <title>Horus Tech</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="auth.css">
+        content="Horus — Plataforma de ciberseguridad autónoma. Analiza, entiende y fortalece la seguridad digital de tu empresa antes de que ocurra un ataque.">
+    <title>HORUS — Seguridad Ofensiva Autónoma</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap"
+        rel="stylesheet">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x13082;</text></svg>">
+    <style>
+        :root {
+            --bg: #020a10;
+            --surface: #051420;
+            --accent: #22d3ee;
+            --accent-glow: rgba(34, 211, 238, 0.3);
+            --red: #ef4444;
+            --white: #f8fafc;
+            --gray: #94a3b8;
+            --orbitron: 'Orbitron', sans-serif;
+            --rajdhani: 'Rajdhani', sans-serif;
+            --mono: 'Share Tech Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--white);
+            font-family: var(--rajdhani);
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+
+        /* UTILS */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-glow);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            font-family: var(--orbitron);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: var(--bg);
+            border: 1px solid var(--accent);
+        }
+
+        .btn-primary:hover {
+            background-color: transparent;
+            color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .btn-outline {
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--accent-glow);
+        }
+
+        /* NAV */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            background: rgba(2, 10, 16, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(34, 211, 238, 0.1);
+        }
+
+        .nav-content {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: var(--orbitron);
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--gray);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .nav-cta {
+            display: flex;
+            gap: 15px;
+        }
+
+        /* HERO */
+        #hero {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        #heroCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .hero-bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('src/images/global_Connected.jpeg') center/cover no-repeat;
+            opacity: 0.15;
+            z-index: 0;
+            filter: saturate(0.5) brightness(0.6);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            max-width: 900px;
+            padding: 20px;
+        }
+
+        .hero-eyebrow {
+            font-family: var(--mono);
+            color: var(--accent);
+            font-size: 1rem;
+            margin-bottom: 20px;
+            display: block;
+            letter-spacing: 2px;
+        }
+
+        .hero-title {
+            font-family: var(--orbitron);
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+
+        .hero-title span {
+            color: var(--accent);
+        }
+
+        .hero-subtitle {
+            font-family: var(--mono);
+            font-size: 1.2rem;
+            color: var(--gray);
+            margin-bottom: 40px;
+            min-height: 1.5em;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 50px;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            font-family: var(--mono);
+        }
+
+        .stat-item span {
+            display: block;
+        }
+
+        .stat-val {
+            font-size: 1.8rem;
+            color: var(--white);
+            font-weight: bold;
+        }
+
+        .stat-lbl {
+            color: var(--gray);
+            font-size: 0.8rem;
+        }
+
+        /* RISK */
+        #risk {
+            padding: 100px 0;
+            background-color: var(--surface);
+        }
+
+        .section-tag {
+            font-family: var(--mono);
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .section-title {
+            font-family: var(--orbitron);
+            font-size: 2.2rem;
+            margin-bottom: 40px;
+        }
+
+        .risk-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .risk-visual {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            min-height: 320px;
+            aspect-ratio: 23 / 16;
+        }
+
+        .risk-gif {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+            filter: brightness(0.88) saturate(1.05);
+        }
+
+        .risk-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--red);
+            color: var(--red);
+            padding: 4px 10px;
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            border-radius: 4px;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .risk-content p {
+            color: var(--gray);
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .risk-list {
+            list-style: none;
+            margin-bottom: 30px;
+        }
+
+        .risk-list li {
+            margin-bottom: 15px;
+            padding-left: 24px;
+            position: relative;
+        }
+
+        .risk-list li::before {
+            content: '▶';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-size: 0.8rem;
+            top: 4px;
+        }
+
+        .risk-quote {
+            border-left: 3px solid var(--accent);
+            padding-left: 20px;
+            font-size: 1rem;
+            font-style: italic;
+            color: var(--white);
+        }
+
+        /* PILLARS */
+        #pillars {
+            padding: 100px 0;
+        }
+
+        .pillars-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+
+        .pillar-card {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: 8px;
+            border: 1px solid rgba(34, 211, 238, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pillar-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .pillar-num {
+            font-family: var(--orbitron);
+            font-size: 4rem;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            opacity: 0.05;
+            color: var(--accent);
+        }
+
+        .pillar-icon {
+            font-family: var(--mono);
+            font-size: 1.8rem;
+            color: var(--accent);
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .pillar-card h3 {
+            font-family: var(--orbitron);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .pillar-card p {
+            color: var(--gray);
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+
+        .pillar-tech {
+            font-family: var(--mono);
+            color: var(--accent);
+            font-size: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 15px;
+            display: block;
+        }
+
+        /* PRICING */
+        #pricing {
+            padding: 100px 0;
+            background-color: var(--surface);
+        }
+
+        .pricing-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+
+        .pricing-card {
+            background: var(--bg);
+            border: 1px solid rgba(34, 211, 238, 0.1);
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card--featured {
+            border-color: var(--accent);
+            transform: scale(1.05);
+            position: relative;
+            box-shadow: 0 0 40px rgba(34, 211, 238, 0.1);
+        }
+
+        .featured-label {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: var(--bg);
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            padding: 2px 12px;
+            font-weight: bold;
+            border-radius: 20px;
+        }
+
+        .pricing-card h4 {
+            font-family: var(--mono);
+            color: var(--gray);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .pricing-card .price {
+            font-family: var(--orbitron);
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 5px;
+        }
+
+        .pricing-card .price span {
+            font-size: 1rem;
+            color: var(--gray);
+        }
+
+        .pricing-card .save {
+            color: var(--accent);
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            margin-bottom: 30px;
+            display: block;
+        }
+
+        .pricing-features {
+            list-style: none;
+            text-align: left;
+            margin-bottom: 35px;
+        }
+
+        .pricing-features li {
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            color: var(--white);
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .pricing-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+        }
+
+        .pricing-note {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--gray);
+            font-family: var(--mono);
+            font-size: 0.8rem;
+        }
+
+        /* CLOSING */
+        #closing {
+            position: relative;
+            padding: 120px 0;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        #closingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .closing-content {
+            position: relative;
+            z-index: 10;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .closing-content h2 {
+            font-family: var(--orbitron);
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .closing-content p {
+            color: var(--gray);
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+        }
+
+        /* FOOTER */
+        footer {
+            padding: 50px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            background: var(--bg);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .footer-links a {
+            color: var(--gray);
+            text-decoration: none;
+            font-family: var(--mono);
+            font-size: 0.8rem;
+        }
+
+        .footer-copy {
+            color: var(--gray);
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            opacity: 0.5;
+        }
+
+        /* ANIMATIONS */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .animate-up {
+            animation: fadeInUp 1s forwards;
+            opacity: 0;
+        }
+
+        .delay-1 {
+            animation-delay: 0.3s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.6s;
+        }
+
+        .delay-3 {
+            animation-delay: 0.9s;
+        }
+
+        .delay-4 {
+            animation-delay: 1.2s;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* MOUSE PARTICLES GLOW */
+        #heroCanvas {
+            mix-blend-mode: screen;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 900px) {
+            .risk-grid {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+            .pillars-grid {
+                grid-template-columns: 1fr;
+            }
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            .hero-stats {
+                flex-direction: column;
+                gap: 20px;
+            }
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-    <!-- ═══════ AUTH OVERLAY ═══════ -->
-    <div class="auth-overlay" id="authOverlay">
-
-        <!-- LOGIN -->
-        <div class="auth-box" id="loginBox">
-            <div class="auth-box__eye">𓂀</div>
-            <div class="auth-box__brand">HORUS</div>
-            <div class="auth-box__tagline">Security Scanner — Acceso Restringido</div>
-
-            <form class="auth-form" id="loginForm" novalidate>
-                <div class="auth-field">
-                    <label class="auth-field__label" for="loginUser">USUARIO O CORREO</label>
-                    <input class="auth-field__input" type="text" id="loginUser"
-                        placeholder="usuario o correo@dominio.com" autocomplete="off" spellcheck="false" required>
-                </div>
-                <div class="auth-field">
-                    <label class="auth-field__label" for="loginPass">CONTRASEÑA</label>
-                    <input class="auth-field__input" type="password" id="loginPass" placeholder="••••••••" required>
-                </div>
-                <p class="auth-error" id="loginError">Credenciales incorrectas</p>
-                <button class="auth-btn" type="submit">INGRESAR</button>
-            </form>
-
-            <p class="auth-switch">
-                ¿No tienes cuenta?
-                <span class="auth-switch__link" id="goRegister">Regístrate</span>
-            </p>
-        </div>
-
-        <!-- REGISTRO -->
-        <div class="auth-box" id="registerBox" style="display:none;">
-            <div class="auth-box__eye">𓂀</div>
-            <div class="auth-box__brand">HORUS</div>
-            <div class="auth-box__tagline">Crear nueva cuenta</div>
-
-            <form class="auth-form" id="registerForm" novalidate>
-                <div class="auth-field">
-                    <label class="auth-field__label" for="regFullName">NOMBRE COMPLETO</label>
-                    <input class="auth-field__input" type="text" id="regFullName" placeholder="ej: Juan Pérez García"
-                        autocomplete="name" spellcheck="false" required>
-                </div>
-                <div class="auth-field">
-                    <label class="auth-field__label" for="regUsername">NOMBRE DE USUARIO</label>
-                    <input class="auth-field__input" type="text" id="regUsername" placeholder="ej: juan.perez"
-                        autocomplete="username" spellcheck="false" required>
-                </div>
-                <div class="auth-field">
-                    <label class="auth-field__label" for="regEmail">CORREO ELECTRÓNICO</label>
-                    <input class="auth-field__input" type="email" id="regEmail" placeholder="nombre@dominio.com"
-                        autocomplete="off" spellcheck="false" required>
-                </div>
-                <div class="auth-field">
-                    <label class="auth-field__label" for="regPass">CONTRASEÑA</label>
-                    <input class="auth-field__input" type="password" id="regPass" placeholder="mínimo 6 caracteres"
-                        required>
-                </div>
-                <div class="auth-field">
-                    <label class="auth-field__label" for="regPass2">CONFIRMAR CONTRASEÑA</label>
-                    <input class="auth-field__input" type="password" id="regPass2" placeholder="repite la contraseña"
-                        required>
-                </div>
-                <p class="auth-error" id="registerError"></p>
-                <p class="auth-success" id="registerSuccess">✓ Cuenta creada. Redirigiendo al login...</p>
-                <button class="auth-btn" type="submit">CREAR CUENTA</button>
-            </form>
-
-            <p class="auth-switch">
-                ¿Ya tienes cuenta?
-                <span class="auth-switch__link" id="goLogin">Inicia sesión</span>
-            </p>
-        </div>
-
-    </div>
-    <!-- ═══════ FIN AUTH OVERLAY ═══════ -->
-
-
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="scanner-ring"></div>
-        <p class="loading-text" id="loadingText">Remediando brechas de seguridad...</p>
-        <div class="loading-details" id="loadingDetails"></div>
-    </div>
-
-    <!-- Email Modal -->
-    <div class="email-modal-overlay" id="emailModalOverlay">
-        <div class="email-modal">
-            <div class="email-modal__header">
-                <span class="email-modal__title">ENVIAR REPORTE POR CORREO</span>
-                <button class="email-modal__close" id="emailModalClose" type="button" aria-label="Cerrar">x</button>
-            </div>
-            <div class="email-modal__body">
-                <label class="email-modal__label" for="emailModalInput">CORREO DESTINO</label>
-                <input class="scan-card__input email-modal__input" type="email" id="emailModalInput"
-                    placeholder="nombre@dominio.com" autocomplete="email" spellcheck="false" required>
-                <p class="email-modal__hint">Se descargara el PDF y se abrira tu correo con todo pre-configurado. Solo
-                    adjunta el archivo y envia.</p>
-                <p class="email-modal__error" id="emailModalError"></p>
-            </div>
-            <div class="email-modal__actions">
-                <button class="scan-card__btn email-modal__send" id="emailModalSend" type="button">ENVIAR</button>
-                <button class="btn-chat-action email-modal__cancel" id="emailModalCancel"
-                    type="button">CANCELAR</button>
+    <!-- NAV -->
+    <nav>
+        <div class="container nav-content">
+            <a href="#" class="logo"><span>HORUS</span></a>
+            <ul class="nav-links">
+                <li><a href="#risk">El Riesgo</a></li>
+                <li><a href="#pillars">Cómo Funciona</a></li>
+                <li><a href="#pricing">Precios</a></li>
+            </ul>
+            <div class="nav-cta">
+                <a href="app.html" class="btn btn-outline">Iniciar Sesión</a>
+                <a href="app.html" class="btn btn-primary">Prueba Gratis</a>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <!-- Error Toast -->
-    <div class="error-toast" id="errorToast">
-        <span class="error-toast__icon">[!]</span>
-        <span class="error-toast__message" id="errorMessage"></span>
-        <button class="error-toast__close" id="errorClose" aria-label="Cerrar">x</button>
-    </div>
-
-    <!-- ── NUEVO: FAB chatbot flotante ── -->
-    <button class="chat-fab" id="chatFabBtn" aria-label="Abrir asistente IA">
-        <span class="chat-fab__icon">𓂀</span>
-        <span class="chat-fab__label">IA</span>
-    </button>
-    <div class="chat-fab-panel" id="chatFabPanel" aria-hidden="true">
-        <div class="scan-card ai-chat-card">
-            <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;">
-                <h2 class="section-header__title">Agente IA Conversacional</h2>
-                <button class="chat-fab-close" id="chatFabClose" type="button" aria-label="Cerrar">✕</button>
+    <!-- HERO -->
+    <section id="hero">
+        <div class="hero-bg-image"></div>
+        <canvas id="heroCanvas"></canvas>
+        <div class="hero-content">
+            <span class="hero-eyebrow animate-up">SISTEMA DE SEGURIDAD OFENSIVA V1.0</span>
+            <h1 class="hero-title animate-up delay-1">Autonomous cybersecurity for modern infrastructure</h1>
+            <p class="hero-subtitle animate-up delay-2" id="heroTyping"></p>
+            <div class="hero-cta animate-up delay-3">
+                <a href="app.html" class="btn btn-primary">Escanea tu red gratis</a>
             </div>
-            <div class="ai-chat-toolbar">
-                <span class="badge badge--ai-pending" id="aiStatusBadge">IA: verificando...</span>
-                <span class="ai-chat-toolbar__sim" id="aiLastSimulation">Ultima simulacion: --</span>
-            </div>
-            <div class="ai-chat-actions" id="aiQuickActions">
-                <button class="btn-chat-action" type="button" data-action="status">Estado IA</button>
-                <button class="btn-chat-action" type="button" data-action="history">Historial</button>
-                <button class="btn-chat-action" type="button" data-action="analyze-last">Analizar ultima
-                    simulacion</button>
-                <button class="btn-chat-action" type="button" data-action="download-last">Descargar PDF</button>
-                <button class="btn-chat-action" type="button" data-action="email-last">Enviar por correo</button>
-                <button class="btn-chat-action" type="button" data-action="help">Ayuda</button>
-            </div>
-            <div class="ai-chat-window" id="aiChatWindow" aria-live="polite"></div>
-            <form class="ai-chat-form" id="aiChatForm">
-                <input type="text" class="scan-card__input ai-chat-input" id="aiChatInput"
-                    placeholder='Escribe: "analiza simulacion 12", "descargar reporte ejecutivo ultima"...'
-                    autocomplete="off" spellcheck="false" required>
-                <button type="submit" class="scan-card__btn ai-chat-submit">ENVIAR</button>
-            </form>
-        </div>
-    </div>
-    <!-- ── FIN FAB chatbot ── -->
-
-    <!-- APP — oculta hasta autenticarse -->
-    <div class="container" id="appContainer" style="display:none;">
-
-        <!-- Hero -->
-        <header class="hero">
-            <!-- ── NUEVO: recuadro globo 3D ── -->
-            <div class="hero__globe-wrap">
-                <canvas id="globeCanvas"></canvas>
-                <div class="hero__globe-overlay"></div>
-            </div>
-            <h1 class="hero__title">HORUS</h1>
-            <p class="hero__subtitle" id="heroSubtitle">
-                <span id="heroTypingText"></span><span class="console-cursor">_</span>
-            </p>
-            <!-- Sesión activa (Movida a la parte superior) -->
-            <div class="session-bar" id="sessionBar">
-                <div class="session-bar__left">
-                    <div class="session-user-dropdown">
-                        <span class="session-bar__user" id="sessionUser">ADMIN</span>
-                        <span class="session-dropdown-arrow">▼</span>
-                        <ul class="session-dropdown-menu">
-                            <li><button class="session-btn" id="adminUsersBtn" style="display:none;">GESTIÓN
-                                    USUARIOS</button></li>
-                        </ul>
-                    </div>
+            <div class="hero-stats animate-up delay-4">
+                <div class="stat-item">
+                    <span class="stat-val">43%</span>
+                    <span class="stat-lbl">son ataques a PyMEs</span>
                 </div>
-                <div class="session-bar__right">
-                    <button class="session-btn session-btn--logout" id="logoutBtn">CERRAR SESIÓN</button>
+                <div class="stat-item">
+                    <span class="stat-val">$200K</span>
+                    <span class="stat-lbl">Costo promedio incidente</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-val">&lt;1h</span>
+                    <span class="stat-lbl">Para detectar brechas</span>
                 </div>
             </div>
-        </header>
-
-        <!-- Mode Tabs -->
-        <div class="tabs" id="modeTabs">
-            <button class="tab active" data-mode="discover" id="tabDiscover">
-                <span class="tab__label">DESCUBRIR RED</span>
-            </button>
-            <button class="tab" data-mode="scan" id="tabScan">
-                <span class="tab__label">ESCANEO PROFUNDO</span>
-            </button>
         </div>
+    </section>
 
-        <div class="workspace-layout">
-            <div class="workspace-main">
-
-                <!-- Discover Network Card -->
-                <section class="scan-card" id="discoverCard">
-                    <div class="scan-card__header">
-                        <label class="scan-card__label" for="subnetInput">SUBRED A EXPLORAR (CIDR)</label>
-                        <button class="btn-auto-detect" id="autoDetectBtn" type="button">DETECTAR RED</button>
+    <!-- RISK -->
+    <section id="risk">
+        <div class="container">
+            <div class="risk-grid">
+                <div class="risk-visual reveal">
+                    <img class="risk-gif" src="src/images/ataques-mundiales.gif"
+                        alt="Mapa mundial animado de ataques ciberneticos" loading="lazy" decoding="async"
+                        referrerpolicy="no-referrer">
+                    <div class="risk-badge">[!] AMENAZA ACTIVA DETECTADA</div>
+                </div>
+                <div class="risk-content">
+                    <span class="section-tag reveal">EL RIESGO REAL</span>
+                    <h2 class="section-title reveal">¿Su empresa sabe qué tan vulnerable es hoy?</h2>
+                    <p class="reveal">En los últimos años, múltiples organizaciones e instituciones han sido
+                        comprometidas por ataques cibernéticos. Si entidades con grandes recursos pueden ser
+                        vulneradas, las PyMEs suelen convertirse en el próximo objetivo fácil.</p>
+                    <ul class="risk-list">
+                        <li class="reveal"><strong>Pérdida de facturación diaria</strong> mientras el sistema está
+                            secuestrado.</li>
+                        <li class="reveal"><strong>Filtración de datos de clientes</strong> (Ley de Protección de
+                            Datos).</li>
+                        <li class="reveal"><strong>Parálisis total</strong> de la operación comercial.</li>
+                        <li class="reveal">Horus cuesta menos de $1 USD al día. Un ataque cuesta toda tu empresa.</li>
+                    </ul>
+                    <div class="risk-quote reveal">
+                        “¿Por qué nadie detectó esto antes?” — La pregunta que aparece después de cada ataque. Horus
+                        existe para que nunca tengas que hacerla.
                     </div>
-                    <form class="scan-card__form" id="discoverForm">
-                        <input type="text" class="scan-card__input" id="subnetInput" placeholder="Ej: 192.168.78.0/24"
-                            autocomplete="off" spellcheck="false" required>
-                        <button type="submit" class="scan-card__btn" id="discoverBtn">
-                            DESCUBRIR
-                        </button>
-                    </form>
-                    <div class="auto-detect-info" id="autoDetectInfo" style="display: none;">
-                        <span class="auto-detect-info__label">Red detectada:</span>
-                        <span class="auto-detect-info__value" id="detectedNetwork">--</span>
-                        <span class="auto-detect-info__sep">|</span>
-                        <span class="auto-detect-info__label">IP local:</span>
-                        <span class="auto-detect-info__value" id="detectedIP">--</span>
-                    </div>
-                </section>
-
-                <!-- Scan Host Card -->
-                <section class="scan-card" id="scanCard" style="display: none;">
-                    <label class="scan-card__label" for="targetInput">IP OBJETIVO PARA ESCANEO PROFUNDO</label>
-                    <form class="scan-card__form" id="scanForm">
-                        <input type="text" class="scan-card__input" id="targetInput" placeholder="Ej: 192.168.78.1"
-                            autocomplete="off" spellcheck="false" required>
-                        <button type="submit" class="scan-card__btn" id="scanBtn">
-                            INICIAR ESCANEO
-                        </button>
-                    </form>
-                </section>
-
-                <!-- ADMIN USERS MANAGEMENT -->
-                <section class="scan-card admin-users-card" id="adminUsersCard" style="display:none;">
-                    <div class="section-header admin-users-card__header">
-                        <h2 class="section-header__title">Panel Admin — Gestión de Usuarios</h2>
-                        <div class="admin-users-card__header-actions">
-                            <button class="btn-chat-action" type="button" id="adminUsersRefreshBtn">Refrescar</button>
-                            <button class="btn-chat-action" type="button" id="adminUsersCloseBtn">Cerrar</button>
-                        </div>
-                    </div>
-
-                    <div class="admin-users-layout">
-                        <form class="admin-users-form" id="adminCreateUserForm" novalidate>
-                            <h3 class="admin-users-form__title">Crear Usuario</h3>
-                            <label class="admin-users-form__label" for="adminNewFullName">Nombre completo</label>
-                            <input class="scan-card__input admin-users-form__input" id="adminNewFullName" type="text"
-                                placeholder="ej: Ana María López" autocomplete="name" required>
-
-                            <label class="admin-users-form__label" for="adminNewUsername">Nombre de usuario</label>
-                            <input class="scan-card__input admin-users-form__input" id="adminNewUsername" type="text"
-                                placeholder="ej: ana.lopez" autocomplete="username" required>
-
-                            <label class="admin-users-form__label" for="adminNewEmail">Correo electrónico</label>
-                            <input class="scan-card__input admin-users-form__input" id="adminNewEmail" type="email"
-                                placeholder="ej: analista1@empresa.com" autocomplete="off" required>
-
-                            <label class="admin-users-form__label" for="adminNewPassword">Contraseña</label>
-                            <input class="scan-card__input admin-users-form__input" id="adminNewPassword"
-                                type="password" placeholder="mínimo 6 caracteres" required>
-
-                            <div class="admin-users-form__checks">
-                                <label><input type="checkbox" id="adminNewIsAdmin"> Es administrador</label>
-                                <label><input type="checkbox" id="adminNewIsActive" checked> Activo</label>
-                            </div>
-
-                            <button class="scan-card__btn admin-users-form__btn" type="submit">Crear Usuario</button>
-                            <p class="admin-users-form__msg" id="adminCreateMsg"></p>
-                        </form>
-
-                        <form class="admin-users-form admin-users-form--edit" id="adminEditUserForm"
-                            style="display:none;" novalidate>
-                            <h3 class="admin-users-form__title">Editar Usuario</h3>
-                            <input type="hidden" id="adminEditUserId">
-
-                            <label class="admin-users-form__label" for="adminEditFullName">Nombre completo</label>
-                            <input class="scan-card__input admin-users-form__input" id="adminEditFullName" type="text"
-                                autocomplete="name" required>
-
-                            <label class="admin-users-form__label" for="adminEditUsername">Nombre de usuario</label>
-                            <input class="scan-card__input admin-users-form__input" id="adminEditUsername" type="text"
-                                autocomplete="username" required>
-
-                            <label class="admin-users-form__label" for="adminEditEmail">Correo electrónico</label>
-                            <input class="scan-card__input admin-users-form__input" id="adminEditEmail" type="email"
-                                autocomplete="off" required>
-
-                            <label class="admin-users-form__label" for="adminEditPassword">Nueva contraseña
-                                (opcional)</label>
-                            <input class="scan-card__input admin-users-form__input" id="adminEditPassword"
-                                type="password" placeholder="dejar vacío para mantener">
-
-                            <div class="admin-users-form__checks">
-                                <label><input type="checkbox" id="adminEditIsAdmin"> Es administrador</label>
-                                <label><input type="checkbox" id="adminEditIsActive"> Activo</label>
-                            </div>
-
-                            <div class="admin-users-form__row">
-                                <button class="scan-card__btn admin-users-form__btn" type="submit">Guardar
-                                    Cambios</button>
-                                <button class="btn-chat-action" type="button" id="adminEditCancelBtn">Cancelar</button>
-                            </div>
-                            <p class="admin-users-form__msg" id="adminEditMsg"></p>
-                        </form>
-                    </div>
-
-                    <div class="admin-users-table-wrap">
-                        <table class="result-table" id="adminUsersTable">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Usuario</th>
-                                    <th>Nombre</th>
-                                    <th>Correo</th>
-                                    <th>Rol</th>
-                                    <th>Activo</th>
-                                    <th>Último Login</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminUsersBody"></tbody>
-                        </table>
-                        <div class="empty-state" id="adminUsersEmpty" style="display:none;">
-                            <p class="empty-state__text">No hay usuarios para mostrar</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- ═══════ DISCOVERY RESULTS ═══════ -->
-                <section class="results" id="discoveryResults">
-
-                    <div class="info-bar" id="networkInfo">
-                        <div class="info-bar__item">
-                            <span class="info-bar__label">SUBRED</span>
-                            <span class="info-bar__value" id="subnetValue">--</span>
-                        </div>
-                        <div class="info-bar__sep"></div>
-                        <div class="info-bar__item">
-                            <span class="info-bar__label">DISPOSITIVOS ACTIVOS</span>
-                            <span class="info-bar__value" id="hostsUp">0</span>
-                        </div>
-                        <div class="info-bar__sep"></div>
-                        <div class="info-bar__item">
-                            <span class="info-bar__label">TOTAL ANALIZADOS</span>
-                            <span class="info-bar__value" id="hostsTotal">0</span>
-                        </div>
-                        <div class="info-bar__sep"></div>
-                        <div class="info-bar__item">
-                            <span class="info-bar__label">TIEMPO</span>
-                            <span class="info-bar__value" id="discoverTime">--</span>
-                        </div>
-                    </div>
-
-                    <div class="command-log" id="discoverCmdLog">
-                        <div class="command-log__header">COMANDO NMAP EJECUTADO</div>
-                        <pre class="command-log__pre" id="discoverCmdText">--</pre>
-                    </div>
-
-                    <div class="result-card result-card--discover">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Dispositivos Encontrados</h2>
-                        </div>
-                        <table class="result-table" id="devicesTable">
-                            <thead>
-                                <tr>
-                                    <th>IP</th>
-                                    <th>Hostname</th>
-                                    <th>MAC</th>
-                                    <th>Fabricante</th>
-                                    <th>Accion</th>
-                                </tr>
-                            </thead>
-                            <tbody id="devicesBody"></tbody>
-                        </table>
-                        <div class="empty-state" id="devicesEmpty" style="display: none;">
-                            <p class="empty-state__text">No se encontraron dispositivos activos en la subred</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- ═══════ DEEP SCAN RESULTS ═══════ -->
-                <section class="results" id="scanResults">
-
-                    <div class="info-bar" id="targetInfo">
-                        <div class="info-bar__item">
-                            <span class="info-bar__label">HOST</span>
-                            <span class="info-bar__value" id="hostValue">--</span>
-                        </div>
-                        <div class="info-bar__sep"></div>
-                        <div class="info-bar__item">
-                            <span class="info-bar__label">ESTADO</span>
-                            <span class="info-bar__value" id="hostStatus">--</span>
-                        </div>
-                        <div class="info-bar__sep"></div>
-                        <div class="info-bar__item">
-                            <span class="info-bar__label">PUERTOS ABIERTOS</span>
-                            <span class="info-bar__value" id="portCount">0</span>
-                        </div>
-                        <div class="info-bar__sep"></div>
-                        <div class="info-bar__item">
-                            <span class="info-bar__label">HYDRA TESTS</span>
-                            <span class="info-bar__value" id="hydraCount">0</span>
-                        </div>
-                        <div class="info-bar__sep"></div>
-                        <div class="info-bar__item">
-                            <span class="info-bar__label">TIEMPO</span>
-                            <span class="info-bar__value" id="scanTime">--</span>
-                        </div>
-                    </div>
-
-                    <div class="command-log" id="nmapCmdLog">
-                        <div class="command-log__header">COMANDO NMAP EJECUTADO</div>
-                        <pre class="command-log__pre" id="nmapCmdText">--</pre>
-                    </div>
-
-                    <div class="result-card result-card--network" id="networkArchCard">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Informacion de Red y Arquitectura</h2>
-                        </div>
-                        <div class="network-grid" id="networkGrid"></div>
-                    </div>
-
-                    <div class="result-card result-card--os" id="osCard" style="display: none;">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Deteccion de Sistema Operativo</h2>
-                        </div>
-                        <div id="osContent"></div>
-                    </div>
-
-                    <div class="result-card result-card--ports">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Puertos Abiertos y Servicios (Nmap)</h2>
-                        </div>
-                        <table class="result-table" id="portsTable">
-                            <thead>
-                                <tr>
-                                    <th>Puerto</th>
-                                    <th>Estado</th>
-                                    <th>Servicio</th>
-                                    <th>Producto</th>
-                                    <th>Version</th>
-                                    <th>Info</th>
-                                </tr>
-                            </thead>
-                            <tbody id="portsBody"></tbody>
-                        </table>
-                        <div class="empty-state" id="portsEmpty" style="display: none;">
-                            <p class="empty-state__text">No se encontraron puertos abiertos</p>
-                        </div>
-                    </div>
-
-                    <div class="result-card result-card--trace" id="traceCard" style="display: none;">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Traceroute</h2>
-                        </div>
-                        <table class="result-table" id="traceTable">
-                            <thead>
-                                <tr>
-                                    <th>TTL</th>
-                                    <th>IP</th>
-                                    <th>Hostname</th>
-                                    <th>RTT</th>
-                                </tr>
-                            </thead>
-                            <tbody id="traceBody"></tbody>
-                        </table>
-                    </div>
-
-                    <div class="result-card result-card--vulns" id="vulnsCard" style="display: none;">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Vulnerabilidades Detectadas</h2>
-                        </div>
-                        <div id="vulnsContent"></div>
-                    </div>
-
-                    <div class="result-card result-card--hydra" id="hydraCard">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Pruebas de Credenciales (Hydra)</h2>
-                        </div>
-                        <div class="command-log command-log--inner" id="hydraCmdLog" style="display: none;">
-                            <div class="command-log__header">COMANDOS HYDRA EJECUTADOS</div>
-                            <pre class="command-log__pre" id="hydraCmdText">--</pre>
-                        </div>
-                        <table class="result-table" id="hydraTable">
-                            <thead>
-                                <tr>
-                                    <th>Puerto</th>
-                                    <th>Servicio</th>
-                                    <th>Estado</th>
-                                    <th>Riesgo</th>
-                                    <th>Detalle</th>
-                                </tr>
-                            </thead>
-                            <tbody id="hydraBody"></tbody>
-                        </table>
-                        <div class="empty-state" id="hydraEmpty" style="display: none;">
-                            <p class="empty-state__text">No se encontraron servicios de autenticacion para probar con
-                                Hydra</p>
-                        </div>
-                    </div>
-
-                    <div class="result-card result-card--scripts" id="scriptsCard" style="display: none;">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Scripts NSE Ejecutados</h2>
-                        </div>
-                        <div id="scriptsContent"></div>
-                    </div>
-
-                </section>
-
-                <!-- ═══════ UNIFIED ANTI-RANSOMWARE MONITOR ═══════ -->
-                <section class="results active" id="unifiedGuardResults">
-                    <div class="result-card result-card--network">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Monitor Unificado Anti-Ransomware</h2>
-                            <button class="btn-chat-action" id="unifiedRefreshBtn" type="button">REFRESCAR</button>
-                        </div>
-                        <div class="unified-risk">
-                            <div class="unified-risk__score" id="unifiedRiskScore">0/100</div>
-                            <div class="unified-risk__status" id="unifiedRiskStatus">LOW</div>
-                        </div>
-                    </div>
-
-                    <div class="result-card result-card--network">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Endpoint Telemetry</h2>
-                        </div>
-                        <div class="unified-metrics" id="endpointMetrics"></div>
-                    </div>
-
-                    <div class="result-card result-card--ports">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Findings Recientes</h2>
-                        </div>
-                        <table class="result-table" id="unifiedFindingsTable">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Fuente</th>
-                                    <th>Tipo</th>
-                                    <th>Severidad</th>
-                                    <th>Riesgo</th>
-                                </tr>
-                            </thead>
-                            <tbody id="unifiedFindingsBody"></tbody>
-                        </table>
-                        <div class="empty-state" id="unifiedFindingsEmpty" style="display:none;">
-                            <p class="empty-state__text">Sin findings en este momento</p>
-                        </div>
-                    </div>
-
-                    <div class="result-card result-card--vulns">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Correlaciones Activas</h2>
-                        </div>
-                        <ul class="unified-correlations" id="unifiedCorrelationsList"></ul>
-                    </div>
-
-                    <div class="result-card result-card--hydra">
-                        <div class="section-header">
-                            <h2 class="section-header__title">Remediación</h2>
-                        </div>
-                        <div class="scan-card__form unified-remediation">
-                            <input class="scan-card__input" id="remediationFindingId" type="text"
-                                placeholder="ID de finding (o vacío para usar el primero)">
-                            <button class="scan-card__btn" id="remediationPreviewBtn" type="button">PREVIEW</button>
-                            <button class="scan-card__btn" id="remediationExecuteBtn" type="button">EJECUTAR</button>
-                        </div>
-                        <pre class="command-log__pre" id="remediationOutput">--</pre>
-                    </div>
-                </section>
-
-                <!-- Footer -->
-                <footer class="footer">
-                    HORUS TECH Security Scanner // 2026 — Powered by Nmap + Hydra
-                </footer>
-
+                </div>
             </div>
-
-
         </div>
-    </div>
+    </section>
 
-    <script src="app.js"></script>
-    <script src="auth.js"></script>
+    <!-- PILLARS -->
+    <section id="pillars">
+        <div class="container">
+            <div class="pillars-header">
+                <span class="section-tag reveal">LOS 3 PILARES</span>
+                <h2 class="section-title reveal">Cómo Horus protege su infraestructura</h2>
+            </div>
+            <div class="pillars-grid">
+                <div class="pillar-card reveal">
+                    <span class="pillar-num">01</span>
+                    <span class="pillar-icon">[>>]</span>
+                    <h3>Escaneo de Red</h3>
+                    <p>Horus actúa como un hacker ético. Encuentra puertas traseras, puertos abiertos y servicios
+                        vulnerables antes que los atacantes.</p>
+                    <span class="pillar-tech">Nmap · NSE Scripts · Hydra</span>
+                </div>
+                <div class="pillar-card reveal" style="transition-delay: 0.2s;">
+                    <span class="pillar-num">02</span>
+                    <span class="pillar-icon">[AI]</span>
+                    <h3>IA de Riesgos</h3>
+                    <p>Convierte datos crudos en decisiones ejecutivas. Nuestra IA interpreta hallazgos y genera
+                        reportes de priorización inmediata.</p>
+                    <span class="pillar-tech">GPT-4 Engine · Executive PDF</span>
+                </div>
+                <div class="pillar-card reveal" style="transition-delay: 0.4s;">
+                    <span class="pillar-num">03</span>
+                    <span class="pillar-icon">[++]</span>
+                    <h3>Protección Automática</h3>
+                    <p>Monitoreo proactivo en tiempo real. Horus aplica medidas defensivas ante brechas detectadas de
+                        forma autónoma.</p>
+                    <span class="pillar-tech">Autonomous Remediation · 24/7</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PRICING -->
+    <section id="pricing">
+        <div class="container">
+            <div class="pricing-header">
+                <span class="section-tag reveal">PLANES DE DEFENSA</span>
+                <h2 class="section-title reveal">Ciberseguridad Elite al alcance de PyMEs</h2>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card reveal">
+                    <h4>SEMANAL</h4>
+                    <div class="price">$9 <span>/ sem</span></div>
+                    <span class="save">&nbsp;</span>
+                    <ul class="pricing-features">
+                        <li>Escaneo completo de red</li>
+                        <li>Detección de vulnerabilidades</li>
+                        <li>Reporte IA básico</li>
+                        <li>Protección activa semanal</li>
+                    </ul>
+                    <a href="app.html" class="btn btn-outline" style="width: 100%;">Seleccionar</a>
+                </div>
+                <div class="pricing-card pricing-card--featured reveal">
+                    <span class="featured-label">RECOMENDADO</span>
+                    <h4>MENSUAL</h4>
+                    <div class="price">$29 <span>/ mes</span></div>
+                    <span class="save">¡Ahorras $7 USD mensuales!</span>
+                    <ul class="pricing-features">
+                        <li>Monitoreo continuo 24/7</li>
+                        <li>Alertas críticas inmediatas</li>
+                        <li>Reporte Ejecutivo IA Premium</li>
+                        <li>Acceso a Agente de Chat IA</li>
+                        <li>Historial de simulaciones</li>
+                    </ul>
+                    <a href="app.html" class="btn btn-primary" style="width: 100%;">Protege mi empresa</a>
+                </div>
+                <div class="pricing-card reveal">
+                    <h4>ANUAL</h4>
+                    <div class="price">$290 <span>/ año</span></div>
+                    <span class="save">¡2 meses gratis incluidos!</span>
+                    <ul class="pricing-features">
+                        <li>Todo el plan Mensual</li>
+                        <li>Acceso multi-usuario</li>
+                        <li>SLA de respuesta prioritaria</li>
+                        <li>Dashboard corporativo completo</li>
+                    </ul>
+                    <a href="app.html" class="btn btn-outline" style="width: 100%;">Seleccionar</a>
+                </div>
+            </div>
+            <p class="pricing-note reveal">Prueba gratuita disponible por 24 horas — sin tarjeta de crédito.</p>
+        </div>
+    </section>
+
+    <!-- CLOSING -->
+    <section id="closing">
+        <canvas id="closingCanvas"></canvas>
+        <div class="closing-content container">
+            <h2 class="reveal">El futuro no es esperar el ataque. <br>Es ser <span
+                    style="color:var(--accent);">inmune</span> a ellos.</h2>
+            <p class="reveal">Cualquier empresa merece defensa de nivel enterprise. Comience su defensa hoy.</p>
+            <div class="reveal" style="display:flex; gap:20px; justify-content:center;">
+                <a href="index.html" class="btn btn-primary btn-lg">Escanea tu red gratis ahora</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container">
+            <div class="footer-links">
+                <a href="#risk">El Riesgo</a>
+                <a href="#pillars">Cómo Funciona</a>
+                <a href="#pricing">Precios</a>
+                <a href="index.html">Plataforma</a>
+            </div>
+            <p class="footer-copy">HORUS SECURITY PLATFORM &copy; 2026 · SISTEMA DE DEFENSA AUTÓNOMA</p>
+        </div>
+    </footer>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="globe.js"></script>
+    <script>
+        /* Hero Particle Network - Hybrid (Mouse Following from SaaS version) */
+        (function () {
+            const canvas = document.getElementById('heroCanvas');
+            const ctx = canvas.getContext('2d');
+            let W, H, nodes = [];
+            const MAX_DIST = 140;
 
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', () => { resize(); boot(); });
+            resize();
+
+            function boot() {
+                const count = Math.floor(W * H / 10000);
+                nodes = [];
+                for (let i = 0; i < count; i++) {
+                    nodes.push({
+                        x: Math.random() * W, y: Math.random() * H,
+                        vx: (Math.random() - 0.5) * 0.4,
+                        vy: (Math.random() - 0.5) * 0.4,
+                        r: Math.random() * 1.5 + 0.5,
+                        a: Math.random() * 0.5 + 0.2
+                    });
+                }
+            }
+            boot();
+
+            let mouse = { x: -1000, y: -1000 };
+            document.addEventListener('mousemove', e => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            });
+
+            function draw() {
+                ctx.clearRect(0, 0, W, H);
+
+                nodes.forEach(n => {
+                    n.x += n.vx; n.y += n.vy;
+                    if (n.x < 0) n.x = W; if (n.x > W) n.x = 0;
+                    if (n.y < 0) n.y = H; if (n.y > H) n.y = 0;
+
+                    // Mouse influence
+                    const dx_m = mouse.x - n.x, dy_m = mouse.y - n.y;
+                    const dist_m = Math.sqrt(dx_m * dx_m + dy_m * dy_m);
+                    if (dist_m < 200) {
+                        n.vx += dx_m / dist_m * 0.01;
+                        n.vy += dy_m / dist_m * 0.01;
+                    }
+
+                    // Clamp velocity
+                    const spd = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
+                    if (spd > 0.8) { n.vx *= 0.95; n.vy *= 0.95; }
+
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(34, 211, 238, ${n.a})`;
+                    ctx.fill();
+                });
+
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        const dx = nodes[i].x - nodes[j].x;
+                        const dy = nodes[i].y - nodes[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < MAX_DIST) {
+                            const alpha = (1 - dist / MAX_DIST) * 0.2;
+                            ctx.strokeStyle = `rgba(34, 211, 238, ${alpha})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.beginPath();
+                            ctx.moveTo(nodes[i].x, nodes[i].y);
+                            ctx.lineTo(nodes[j].x, nodes[j].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+
+        /* Closing Three.js Wave */
+        (function () {
+            const canvas = document.getElementById('closingCanvas');
+            if (!canvas) return;
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, canvas.offsetWidth / canvas.offsetHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            function resizeClosingScene() {
+                const width = canvas.clientWidth || canvas.offsetWidth || 1;
+                const height = canvas.clientHeight || canvas.offsetHeight || 1;
+                renderer.setSize(width, height, false);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            }
+            resizeClosingScene();
+
+            const geometry = new THREE.PlaneGeometry(90, 30, 120, 60);
+            const material = new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true, transparent: true, opacity: 0.1 });
+            const plane = new THREE.Mesh(geometry, material);
+            plane.rotation.x = -Math.PI / 2;
+            scene.add(plane);
+            camera.position.set(0, 5, 10);
+            camera.lookAt(0, 0, 0);
+            window.addEventListener('resize', resizeClosingScene);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                const time = Date.now() * 0.001;
+                const positions = geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i];
+                    const z = positions[i + 2];
+                    positions[i + 1] = Math.sin(x * 0.3 + time) * 0.5 + Math.cos(z * 0.3 + time) * 0.5;
+                }
+                geometry.attributes.position.needsUpdate = true;
+                renderer.render(scene, camera);
+            }
+            animate();
+        })();
+
+        /* Hero Typing Effect */
+        (function () {
+            const el = document.getElementById('heroTyping');
+            const phrases = [
+                "Horus detecta vulnerabilidades antes que los atacantes.",
+                "IA que convierte datos en decisiones ejecutivas.",
+                "Seguridad proactiva. Nunca reactiva. Nunca tarde.",
+                "El escudo autónomo para tu empresa."
+            ];
+            let i = 0, j = 0, isDeleting = false;
+            function type() {
+                const current = phrases[i];
+                if (isDeleting) {
+                    el.textContent = current.substring(0, j - 1);
+                    j--;
+                } else {
+                    el.textContent = current.substring(0, j + 1);
+                    j++;
+                }
+                if (!isDeleting && j === current.length) {
+                    isDeleting = true;
+                    setTimeout(type, 2000);
+                } else if (isDeleting && j === 0) {
+                    isDeleting = false;
+                    i = (i + 1) % phrases.length;
+                    setTimeout(type, 500);
+                } else {
+                    setTimeout(type, isDeleting ? 30 : 60);
+                }
+            }
+            type();
+        })();
+
+        /* Scroll Reveal */
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) entry.target.classList.add('active');
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    </script>
 </body>
 
 </html>

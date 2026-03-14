@@ -84,9 +84,9 @@ app.get("/api/health", (req, res) => {
 // Static frontend
 const frontendDirectory = path.join(__dirname, "../../FRONTED");
 
-// Explicitly serve landing.html on root
+// Explicitly serve index.html on root (landing page)
 app.get("/", (req, res) => {
-    res.sendFile(path.join(frontendDirectory, "landing.html"));
+    res.sendFile(path.join(frontendDirectory, "index.html"));
 });
 
 app.use(express.static(frontendDirectory));
