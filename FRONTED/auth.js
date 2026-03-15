@@ -193,7 +193,7 @@
         loginError.style.display = 'none';
         registerError.style.display = 'none';
         registerOk.style.display = 'none';
-        loginError.textContent = 'Credenciales incorrectas';
+        loginError.textContent = 'Invalid credentials';
         registerError.textContent = '';
 
         if (adminCreateMsg) {
@@ -495,7 +495,7 @@
             document.getElementById('loginPass').value = '';
             showApp(payload.user);
         } catch (error) {
-            loginError.textContent = error.message || 'Credenciales incorrectas';
+            loginError.textContent = error.message || 'Invalid credentials';
             loginError.style.display = 'block';
             document.getElementById('loginPass').value = '';
             loginBox.classList.remove('shake');
@@ -517,49 +517,49 @@
         registerOk.style.display = 'none';
 
         if (!fullName) {
-            registerError.textContent = 'El nombre completo es obligatorio';
+            registerError.textContent = 'Full name is required';
             registerError.style.display = 'block';
             return;
         }
 
         if (fullName.length < 3) {
-            registerError.textContent = 'El nombre completo debe tener al menos 3 caracteres';
+            registerError.textContent = 'Full name must be at least 3 characters long';
             registerError.style.display = 'block';
             return;
         }
 
         if (!username) {
-            registerError.textContent = 'El nombre de usuario es obligatorio';
+            registerError.textContent = 'Username is required';
             registerError.style.display = 'block';
             return;
         }
 
         if (!isValidUsername(username)) {
-            registerError.textContent = 'Usuario inválido (3-40, letras, números, ., _, -)';
+            registerError.textContent = 'Invalid username (3-40 chars, letters, numbers, ., _, -)';
             registerError.style.display = 'block';
             return;
         }
 
         if (!email) {
-            registerError.textContent = 'El correo es obligatorio';
+            registerError.textContent = 'Email address is required';
             registerError.style.display = 'block';
             return;
         }
 
         if (!isValidEmail(email)) {
-            registerError.textContent = 'Formato de correo inválido';
+            registerError.textContent = 'Invalid email format';
             registerError.style.display = 'block';
             return;
         }
 
         if (password.length < 6) {
-            registerError.textContent = 'La contraseña debe tener al menos 6 caracteres';
+            registerError.textContent = 'Password must be at least 6 characters long';
             registerError.style.display = 'block';
             return;
         }
 
         if (password !== password2) {
-            registerError.textContent = 'Las contraseñas no coinciden';
+            registerError.textContent = 'Passwords do not match';
             registerError.style.display = 'block';
             return;
         }
@@ -584,7 +584,7 @@
                 showApp(payload.user);
             }, 800);
         } catch (error) {
-            registerError.textContent = error.message || 'No se pudo crear la cuenta';
+            registerError.textContent = error.message || 'Could not create account';
             registerError.style.display = 'block';
             registerBox.classList.remove('shake');
             void registerBox.offsetWidth;

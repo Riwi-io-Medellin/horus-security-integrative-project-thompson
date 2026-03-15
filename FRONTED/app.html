@@ -22,68 +22,68 @@
         <div class="auth-box" id="loginBox">
             <div class="auth-box__eye">𓂀</div>
             <div class="auth-box__brand">HORUS</div>
-            <div class="auth-box__tagline">Security Scanner — Acceso Restringido</div>
+            <div class="auth-box__tagline">Security Scanner — Restricted Access</div>
 
             <form class="auth-form" id="loginForm" novalidate>
                 <div class="auth-field">
-                    <label class="auth-field__label" for="loginUser">USUARIO O CORREO</label>
+                    <label class="auth-field__label" for="loginUser">USERNAME OR EMAIL</label>
                     <input class="auth-field__input" type="text" id="loginUser"
-                        placeholder="usuario o correo@dominio.com" autocomplete="off" spellcheck="false" required>
+                        placeholder="username or email@domain.com" autocomplete="off" spellcheck="false" required>
                 </div>
                 <div class="auth-field">
-                    <label class="auth-field__label" for="loginPass">CONTRASEÑA</label>
+                    <label class="auth-field__label" for="loginPass">PASSWORD</label>
                     <input class="auth-field__input" type="password" id="loginPass" placeholder="••••••••" required>
                 </div>
-                <p class="auth-error" id="loginError">Credenciales incorrectas</p>
-                <button class="auth-btn" type="submit">INGRESAR</button>
+                <p class="auth-error" id="loginError">Invalid credentials</p>
+                <button class="auth-btn" type="submit">SIGN IN</button>
             </form>
 
             <p class="auth-switch">
-                ¿No tienes cuenta?
-                <span class="auth-switch__link" id="goRegister">Regístrate</span>
+                Don't have an account?
+                <span class="auth-switch__link" id="goRegister">Sign up</span>
             </p>
         </div>
 
-        <!-- REGISTRO -->
+        <!-- REGISTER -->
         <div class="auth-box" id="registerBox" style="display:none;">
             <div class="auth-box__eye">𓂀</div>
             <div class="auth-box__brand">HORUS</div>
-            <div class="auth-box__tagline">Crear nueva cuenta</div>
+            <div class="auth-box__tagline">Create new account</div>
 
             <form class="auth-form" id="registerForm" novalidate>
                 <div class="auth-field">
-                    <label class="auth-field__label" for="regFullName">NOMBRE COMPLETO</label>
-                    <input class="auth-field__input" type="text" id="regFullName" placeholder="ej: Juan Pérez García"
+                    <label class="auth-field__label" for="regFullName">FULL NAME</label>
+                    <input class="auth-field__input" type="text" id="regFullName" placeholder="e.g. John Doe Smith"
                         autocomplete="name" spellcheck="false" required>
                 </div>
                 <div class="auth-field">
-                    <label class="auth-field__label" for="regUsername">NOMBRE DE USUARIO</label>
-                    <input class="auth-field__input" type="text" id="regUsername" placeholder="ej: juan.perez"
+                    <label class="auth-field__label" for="regUsername">USERNAME</label>
+                    <input class="auth-field__input" type="text" id="regUsername" placeholder="e.g. john.doe"
                         autocomplete="username" spellcheck="false" required>
                 </div>
                 <div class="auth-field">
-                    <label class="auth-field__label" for="regEmail">CORREO ELECTRÓNICO</label>
-                    <input class="auth-field__input" type="email" id="regEmail" placeholder="nombre@dominio.com"
+                    <label class="auth-field__label" for="regEmail">EMAIL ADDRESS</label>
+                    <input class="auth-field__input" type="email" id="regEmail" placeholder="name@domain.com"
                         autocomplete="off" spellcheck="false" required>
                 </div>
                 <div class="auth-field">
-                    <label class="auth-field__label" for="regPass">CONTRASEÑA</label>
-                    <input class="auth-field__input" type="password" id="regPass" placeholder="mínimo 6 caracteres"
+                    <label class="auth-field__label" for="regPass">PASSWORD</label>
+                    <input class="auth-field__input" type="password" id="regPass" placeholder="minimum 6 characters"
                         required>
                 </div>
                 <div class="auth-field">
-                    <label class="auth-field__label" for="regPass2">CONFIRMAR CONTRASEÑA</label>
-                    <input class="auth-field__input" type="password" id="regPass2" placeholder="repite la contraseña"
+                    <label class="auth-field__label" for="regPass2">CONFIRM PASSWORD</label>
+                    <input class="auth-field__input" type="password" id="regPass2" placeholder="repeat password"
                         required>
                 </div>
                 <p class="auth-error" id="registerError"></p>
-                <p class="auth-success" id="registerSuccess">✓ Cuenta creada. Redirigiendo al login...</p>
-                <button class="auth-btn" type="submit">CREAR CUENTA</button>
+                <p class="auth-success" id="registerSuccess">✓ Account created. Redirecting to login...</p>
+                <button class="auth-btn" type="submit">CREATE ACCOUNT</button>
             </form>
 
             <p class="auth-switch">
-                ¿Ya tienes cuenta?
-                <span class="auth-switch__link" id="goLogin">Inicia sesión</span>
+                Already have an account?
+                <span class="auth-switch__link" id="goLogin">Sign in</span>
             </p>
         </div>
 
