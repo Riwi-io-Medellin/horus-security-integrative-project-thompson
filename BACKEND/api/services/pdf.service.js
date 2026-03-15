@@ -1,3 +1,9 @@
+/**
+ * PDF Service
+ * 
+ * Responsible for generating PDF reports based on simulation
+ * results and findings.
+ */
 async function getPdfKit() {
     const pdfModule = await import("pdfkit");
     return pdfModule.default || pdfModule;
@@ -6,16 +12,16 @@ async function getPdfKit() {
 export async function generatePDFReport(aiReport, simulationMeta) {
     try {
         if (!aiReport || typeof aiReport !== "object") {
-            throw new Error("El analisis de IA es invalido o no existe");
+            throw new Error("AI analysis is invalid or does not exist");
         }
 
         const PDFDocument = await getPdfKit();
 
-        const target = simulationMeta?.target || "Objetivo no especificado";
+        const target = simulationMeta?.target || "Target not specified";
         const scanDate = simulationMeta?.scan_date
-            ? new Date(simulationMeta.scan_date).toLocaleDateString("es-ES")
-            : new Date().toLocaleDateString("es-ES");
-        const projectName = simulationMeta?.project_name || "Evaluacion de Seguridad";
+            ? new Date(simulationMeta.scan_date).toLocaleDateString("en-US")
+            : new Date().toLocaleDateString("en-US");
+        const projectName = simulationMeta?.project_name || "Security Assessment";
 
         const riskScore = Number.isFinite(Number(aiReport.risk_score)) ? Number(aiReport.risk_score) : 0;
         const riskCategory = getRiskCategory(riskScore);
@@ -46,18 +52,18 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                 .fontSize(14)
                 .font("Helvetica")
                 .fillColor("#6b7280")
-                .text("Reporte de Seguridad Cibernetica", { align: "center" });
+                .text("Cybersecurity Report", { align: "center" });
 
             doc.moveDown(2);
 
             doc
                 .fontSize(11)
                 .fillColor("#374151")
-                .text(`Proyecto: ${projectName}`)
+                .text(`Project: ${projectName}`)
                 .moveDown(0.5)
-                .text(`Objetivo analizado: ${target}`)
+                .text(`Analyzed target: ${target}`)
                 .moveDown(0.5)
-                .text(`Fecha de escaneo: ${scanDate}`);
+                .text(`Scan date: ${scanDate}`);
 
             doc.moveDown(2);
 
@@ -66,7 +72,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                 .fontSize(18)
                 .fillColor("#0f172a")
                 .font("Helvetica-Bold")
-                .text("Resumen Ejecutivo");
+                .text("Executive Summary");
 
             doc.moveDown(0.5);
 
@@ -74,7 +80,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                 .fontSize(11)
                 .font("Helvetica")
                 .fillColor("#374151")
-                .text(String(aiReport.executive_summary || "Sin resumen disponible."), {
+                .text(String(aiReport.executive_summary || "No summary available."), {
                     align: "justify"
                 });
 
@@ -90,7 +96,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                 .fillColor("#ffffff")
                 .fontSize(12)
                 .font("Helvetica-Bold")
-                .text(`Riesgo global: ${riskCategory.toUpperCase()} (${riskScore}/100)`, doc.x + 10, startY + 8);
+                .text(`Overall risk: ${riskCategory.toUpperCase()} (${riskScore}/100)`, doc.x + 10, startY + 8);
 
             doc.moveDown(3);
 
@@ -101,7 +107,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                 .fillColor("#0f172a")
                 .fontSize(16)
                 .font("Helvetica-Bold")
-                .text("Vulnerabilidades Detectadas");
+                .text("Detected Vulnerabilities");
 
             doc.moveDown(0.3);
 
@@ -110,10 +116,10 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                 .font("Helvetica")
                 .fillColor("#6b7280")
                 .text(
-                    "Una vulnerabilidad es una debilidad en un sistema que podria ser aprovechada por " +
-                    "un atacante para acceder sin autorizacion, robar informacion o causar danos. " +
-                    "A continuacion se detallan los hallazgos encontrados con explicaciones claras sobre " +
-                    "que significan, que impacto tienen y que acciones debe tomar.",
+                    "A vulnerability is a weakness in a system that could be exploited by " +
+                    "an attacker to gain unauthorized access, steal information, or cause damage. " +
+                    "Below are the findings with clear explanations of what they mean, " +
+                    "their impact, and what actions you should take.",
                     { align: "justify" }
                 );
 
@@ -124,13 +130,13 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                     .fontSize(11)
                     .font("Helvetica")
                     .fillColor("#374151")
-                    .text("No se detectaron vulnerabilidades durante el analisis.");
+                    .text("No vulnerabilities were detected during the analysis.");
             } else {
                 vulnerabilities.slice(0, 10).forEach((vuln, index) => {
                     const severity = String(vuln.severity || "medium").toLowerCase();
                     const color = getSeverityColor(severity);
-                    const title = vuln.title || `Vulnerabilidad ${index + 1}`;
-                    const component = vuln.affected_component || "Componente no especificado";
+                    const title = vuln.title || `Vulnerability ${index + 1}`;
+                    const component = vuln.affected_component || "Unspecified component";
 
                     if (doc.y > 650) doc.addPage();
 
@@ -148,7 +154,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                         .fontSize(9)
                         .font("Helvetica")
                         .fillColor("#4b5563")
-                        .text(`Componente afectado: ${component}`);
+                        .text(`Affected component: ${component}`);
 
                     doc.moveDown(0.3);
 
@@ -157,7 +163,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                             .fontSize(9)
                             .font("Helvetica-Bold")
                             .fillColor("#1e3a5f")
-                            .text("Que significa esto?");
+                            .text("What does this mean?");
 
                         doc
                             .font("Helvetica")
@@ -173,7 +179,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                             .fontSize(9)
                             .font("Helvetica-Bold")
                             .fillColor("#7f1d1d")
-                            .text("Impacto para su organizacion:");
+                            .text("Impact on your organization:");
 
                         doc
                             .font("Helvetica")
@@ -189,7 +195,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                             .fontSize(9)
                             .font("Helvetica-Bold")
                             .fillColor("#166534")
-                            .text("Que debe hacer:");
+                            .text("What you should do:");
 
                         doc
                             .font("Helvetica")
@@ -221,7 +227,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                     .fillColor("#0f172a")
                     .fontSize(16)
                     .font("Helvetica-Bold")
-                    .text("Blindaje Aplicado por HORUS");
+                    .text("Protection Applied by HORUS");
 
                 doc.moveDown(0.4);
 
@@ -231,7 +237,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                     .fillColor("#374151")
                     .text(
                         remediationBlindajeExplanation ||
-                        "La herramienta ejecuto remediaciones para contener y cerrar la brecha detectada, reduciendo la superficie de ataque activa.",
+                        "The tool executed remediations to contain and close the detected breach, reducing the active attack surface.",
                         { align: "justify" }
                     );
             } else {
@@ -242,7 +248,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                     .fillColor("#0f172a")
                     .fontSize(16)
                     .font("Helvetica-Bold")
-                    .text("Recomendaciones de Mitigacion");
+                    .text("Mitigation Recommendations");
 
                 doc.moveDown(0.5);
 
@@ -251,11 +257,11 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                         .fontSize(11)
                         .font("Helvetica")
                         .fillColor("#374151")
-                        .text("No se registraron recomendaciones especificas en el analisis.");
+                        .text("No specific recommendations were recorded in the analysis.");
                 } else {
                     recommendations.forEach((rec, index) => {
-                        const title = rec.title || rec.action || `Recomendacion ${index + 1}`;
-                        const description = rec.description || rec.details || "Sin detalles disponibles.";
+                        const title = rec.title || rec.action || `Recommendation ${index + 1}`;
+                        const description = rec.description || rec.details || "No details available.";
 
                         doc
                             .moveDown(0.8)
@@ -281,7 +287,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                     .fillColor("#0f172a")
                     .fontSize(16)
                     .font("Helvetica-Bold")
-                    .text("Acciones de Remediacion Ejecutadas por HORUS");
+                    .text("Remediation Actions Executed by HORUS");
 
                 doc.moveDown(0.4);
 
@@ -290,8 +296,8 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                     .font("Helvetica")
                     .fillColor("#374151")
                     .text(
-                        "Esta seccion resume las acciones de remediacion registradas por la herramienta. " +
-                        "Permite explicar que hizo HORUS para corregir o contener el problema detectado.",
+                        "This section summarizes the remediation actions recorded by the tool. " +
+                        "It explains what HORUS did to correct or contain the detected problem.",
                         { align: "justify" }
                     );
 
@@ -301,10 +307,10 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                     }
 
                     const statusLabel = item.executed
-                        ? "EJECUTADA"
+                        ? "EXECUTED"
                         : item.queued
-                            ? "EN COLA"
-                            : "REGISTRADA";
+                            ? "QUEUED"
+                            : "REGISTERED";
 
                     const statusColor = item.executed
                         ? "#166534"
@@ -312,11 +318,11 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                             ? "#92400e"
                             : "#1f2937";
 
-                    const title = item.finding_type || "hallazgo";
+                    const title = item.finding_type || "finding";
                     const timestamp = item.timestamp
-                        ? new Date(item.timestamp).toLocaleString("es-ES")
+                        ? new Date(item.timestamp).toLocaleString("en-US")
                         : "--";
-                    const explanation = item.explanation || item.message || "Sin detalle.";
+                    const explanation = item.explanation || item.message || "No detail.";
                     const commands = Array.isArray(item.commands) ? item.commands.filter(Boolean) : [];
                     const actions = Array.isArray(item.actions) ? item.actions.filter(Boolean) : [];
 
@@ -332,8 +338,8 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                         .fontSize(9)
                         .font("Helvetica")
                         .fillColor("#374151")
-                        .text("Fecha: " + timestamp)
-                        .text("Detalle: " + String(explanation), { align: "justify" });
+                        .text("Date: " + timestamp)
+                        .text("Detail: " + String(explanation), { align: "justify" });
 
                     if (commands.length > 0) {
                         doc
@@ -341,7 +347,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                             .fontSize(9)
                             .font("Helvetica")
                             .fillColor("#1f2937")
-                            .text("Comandos: " + commands.join(" | "), { align: "justify" });
+                            .text("Commands: " + commands.join(" | "), { align: "justify" });
                     }
 
                     if (actions.length > 0) {
@@ -350,7 +356,7 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                             .fontSize(9)
                             .font("Helvetica")
                             .fillColor("#1f2937")
-                            .text("Acciones: " + actions.join(", "), { align: "justify" });
+                            .text("Actions: " + actions.join(", "), { align: "justify" });
                     }
                 });
             }
@@ -362,17 +368,17 @@ export async function generatePDFReport(aiReport, simulationMeta) {
                 .fontSize(13)
                 .font("Helvetica-Bold")
                 .fillColor("#78350f")
-                .text("Aviso Legal y Disclaimer");
+                .text("Legal Notice and Disclaimer");
 
             doc.moveDown(0.5);
 
             const disclaimerText = [
-                "Este reporte ha sido generado mediante un analisis automatizado de seguridad realizado por HORUS SECURITY.",
-                "El uso de esta herramienta debe realizarse unicamente en sistemas sobre los cuales se tiene autorizacion explicita.",
-                "El mal uso de este software puede violar leyes de ciberseguridad y privacidad.",
-                "Si bien el analisis utiliza inteligencia artificial y herramientas especializadas, no garantiza la deteccion de todas las vulnerabilidades existentes.",
-                "Se recomienda complementar este reporte con auditorias manuales realizadas por profesionales certificados.",
-                "Este documento contiene informacion sensible sobre la seguridad del sistema analizado y debe tratarse de forma confidencial."
+                "This report has been generated through an automated security analysis performed by HORUS SECURITY.",
+                "The use of this tool should only be carried out on systems over which explicit authorization is held.",
+                "Misuse of this software may violate cybersecurity and privacy laws.",
+                "While the analysis uses artificial intelligence and specialized tools, it does not guarantee the detection of all existing vulnerabilities.",
+                "It is recommended to supplement this report with manual audits performed by certified professionals.",
+                "This document contains sensitive information about the security of the analyzed system and should be treated confidentially."
             ];
 
             doc
@@ -413,10 +419,10 @@ export function validateReportData(aiReport) {
 }
 
 export function getRiskCategory(score) {
-    if (score >= 80) return "Crítico";
-    if (score >= 60) return "Alto";
-    if (score >= 40) return "Medio";
-    return "Bajo";
+    if (score >= 80) return "Critical";
+    if (score >= 60) return "High";
+    if (score >= 40) return "Medium";
+    return "Low";
 }
 
 export function getSeverityColor(severity) {

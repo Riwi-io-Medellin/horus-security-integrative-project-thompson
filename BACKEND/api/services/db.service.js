@@ -1,3 +1,9 @@
+/**
+ * Database Service
+ * 
+ * Manages all queries, updates, and persistence layers related to
+ * network scans, credentials, vulnerabilities, AI analysis, and reports.
+ */
 import { execute, isDbEnabled, testDbConnection } from "../config/db.js";
 
 const DEFAULT_SYSTEM_USER_ID = Number.parseInt(process.env.DEFAULT_SYSTEM_USER_ID || "1", 10) || 1;

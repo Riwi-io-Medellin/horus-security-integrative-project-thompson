@@ -1,7 +1,7 @@
 // ============================================
 // HORUS - SCANNER 
 // ============================================
-//  Frontend controller for network discovery and deep scan views.
+// Frontend controller for network discovery and deep scan views.
 // do.
 
 let API_BASE = "https://horus-beta-tau.vercel.app"; // Point to the real backend when deployed, or use the same URL for now if fullstack

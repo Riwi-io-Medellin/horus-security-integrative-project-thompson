@@ -1,3 +1,8 @@
+/**
+ * AI Routes
+ * 
+ * Defines the Express router for AI-driven analysis, reporting, and remediation endpoints.
+ */
 import express from "express";
 import {
     analyzeSingleSimulation,

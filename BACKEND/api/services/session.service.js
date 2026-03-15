@@ -1,3 +1,8 @@
+/**
+ * Session Service
+ * 
+ * Manages user sessions, authentication tokens, and expirations.
+ */
 import crypto from "crypto";
 
 const SESSION_TTL_MS = Number.parseInt(process.env.AUTH_SESSION_TTL_MS || "43200000", 10) || 43200000;
@@ -27,6 +32,12 @@ function normalizeRoles(roles) {
         .filter(Boolean);
 }
 
+/**
+ * Parses the bearer token from the authorization header.
+ * 
+ * @param {string} authorizationHeader 
+ * @returns {string|null}
+ */
 export function parseBearerToken(authorizationHeader) {
     if (!authorizationHeader || typeof authorizationHeader !== "string") {
         return null;
@@ -40,6 +51,12 @@ export function parseBearerToken(authorizationHeader) {
     return token;
 }
 
+/**
+ * Creates a new session for the given user.
+ * 
+ * @param {Object} user 
+ * @returns {Object} The created session metadata.
+ */
 export function createSession(user) {
     cleanupExpiredSessions();
 
@@ -71,6 +88,12 @@ export function createSession(user) {
     };
 }
 
+/**
+ * Retrieves an active session by token.
+ * 
+ * @param {string} token 
+ * @returns {Object|null}
+ */
 export function getSession(token) {
     cleanupExpiredSessions();
 
@@ -94,6 +117,11 @@ export function getSession(token) {
     };
 }
 
+/**
+ * Revokes a session given a token.
+ * 
+ * @param {string} token 
+ */
 export function revokeSession(token) {
     if (!token) {
         return;
@@ -102,6 +130,11 @@ export function revokeSession(token) {
     sessionStore.delete(token);
 }
 
+/**
+ * Revokes all sessions belonging to a specific user.
+ * 
+ * @param {number|string} userId 
+ */
 export function revokeAllUserSessions(userId) {
     const numericUserId = Number.parseInt(String(userId ?? ""), 10);
     if (!Number.isFinite(numericUserId) || numericUserId <= 0) {

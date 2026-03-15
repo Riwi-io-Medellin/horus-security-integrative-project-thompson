@@ -1,3 +1,9 @@
+/**
+ * Admin Controller
+ * 
+ * Handles administrative actions such as user management.
+ * Provides endpoints to create, read, update, and delete users.
+ */
 import {
     createUserByAdmin,
     deleteUserByAdmin,
@@ -7,6 +13,12 @@ import {
 } from "../services/user.service.js";
 import { revokeAllUserSessions } from "../services/session.service.js";
 
+/**
+ * Normalizes an error object into a consistent format.
+ * 
+ * @param {Error|object} error - The caught error object
+ * @returns {object} Normalized error object with status, code, and message
+ */
 function normalizeError(error) {
     return {
         status: error?.status || 500,
@@ -15,11 +27,24 @@ function normalizeError(error) {
     };
 }
 
+/**
+ * Parses an integer value safely, ensuring it is positive.
+ * 
+ * @param {string|number} value - The parameter to parse
+ * @returns {number|null} The parsed positive integer, or null if invalid
+ */
 function parsePositiveInt(value) {
     const parsed = Number.parseInt(String(value ?? ""), 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+/**
+ * Lists all users for the administration panel.
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ * @returns {Promise<object>} JSON response containing the list of users
+ */
 export async function listUsers(req, res) {
     try {
         await ensureAuthReady();
@@ -40,6 +65,13 @@ export async function listUsers(req, res) {
     }
 }
 
+/**
+ * Creates a new user via the admin panel.
+ * 
+ * @param {object} req - Express request object containing user payload
+ * @param {object} res - Express response object
+ * @returns {Promise<object>} JSON response containing the created user data
+ */
 export async function createUser(req, res) {
     const actorUserId = req.auth?.userId;
 
@@ -72,6 +104,14 @@ export async function createUser(req, res) {
     }
 }
 
+/**
+ * Updates an existing user's details.
+ * Also revokes current sessions if the target user is the executing admin.
+ * 
+ * @param {object} req - Express request object containing updated data and userId parameter
+ * @param {object} res - Express response object
+ * @returns {Promise<object>} JSON response with the updated user data
+ */
 export async function updateUser(req, res) {
     const actorUserId = req.auth?.userId;
     const targetUserId = parsePositiveInt(req.params.userId);
@@ -120,6 +160,13 @@ export async function updateUser(req, res) {
     }
 }
 
+/**
+ * Deletes a user from the system and revokes all of their active sessions.
+ * 
+ * @param {object} req - Express request object containing userId parameter
+ * @param {object} res - Express response object
+ * @returns {Promise<object>} JSON response indicating successful deletion
+ */
 export async function deleteUser(req, res) {
     const actorUserId = req.auth?.userId;
     const targetUserId = parsePositiveInt(req.params.userId);

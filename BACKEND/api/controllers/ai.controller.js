@@ -1,3 +1,9 @@
+/**
+ * AI Controller
+ * 
+ * Manages all AI-related features, including simulation analysis, report generation,
+ * chat interactions with the AI agent, and auto-remediation.
+ */
 import { analyzeWithAI, chatWithAIAgent as chatWithAIAgentService } from "../services/ai.service.js";
 import { generatePDFReport, validateReportData } from "../services/pdf.service.js";
 import {
@@ -2196,6 +2202,13 @@ async function persistAnalysis(simulationId, userId, analysis) {
     }
 }
 
+/**
+ * Analyzes a single network simulation result using AI and returns the insights.
+ * 
+ * @param {object} req - Express request object containing scan payload OR simulation details
+ * @param {object} res - Express response object
+ * @returns {Promise<object>} JSON response with the AI analysis results
+ */
 export async function analyzeSingleSimulation(req, res) {
     try {
         const {
@@ -2255,6 +2268,14 @@ export async function analyzeSingleSimulation(req, res) {
     }
 }
 
+/**
+ * Processes a batch of requested simulations by grouping them per target IP.
+ * Used to avoid redundant sequential analyses for similar targets in close succession.
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ * @returns {Promise<object>} JSON response indicating batch status
+ */
 export async function analyzeBatchSimulations(req, res) {
     try {
         const { simulations } = req.body || {};
@@ -2314,6 +2335,14 @@ export async function analyzeBatchSimulations(req, res) {
     }
 }
 
+/**
+ * Retrieves and triggers analysis for a previously stored simulation by its ID.
+ * Optionally attempts AI remediation if specified.
+ * 
+ * @param {object} req - Express request object containing simulationId parameter
+ * @param {object} res - Express response object
+ * @returns {Promise<object>} JSON response with detailed analysis and optional remediation attempts
+ */
 export async function analyzeStoredSimulation(req, res) {
     const simulationId = parsePositiveInt(req.params.simulationId);
     if (!simulationId) {
@@ -2470,6 +2499,14 @@ async function buildRecentSimulationsContext(userId, currentSimulationId = null)
     }
 }
 
+/**
+ * Chat endpoint that accepts a user prompt and optionally a simulation ID context.
+ * Communicates with the AI agent to provide dynamic interactive guidance.
+ * 
+ * @param {object} req - Express request object containing prompt and context parameters
+ * @param {object} res - Express response object
+ * @returns {Promise<object>} JSON response containing the AI agent's answer
+ */
 export async function chatWithAIAgent(req, res) {
     const message = String(req.body?.message || "").trim();
 
@@ -2587,6 +2624,13 @@ export async function chatWithAIAgent(req, res) {
     }
 }
 
+/**
+ * Endpoint to determine the health and integration status of the configured AI provider.
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ * @returns {Promise<object>} JSON response with detailed AI connectivity status
+ */
 export async function getAIStatus(req, res) {
     try {
         const aiConfigured = isOpenAIConfigured();
@@ -2616,6 +2660,13 @@ export async function getAIStatus(req, res) {
     }
 }
 
+/**
+ * Generates and downloads a comprehensive PDF report based on a given simulation ID.
+ * 
+ * @param {object} req - Express request object containing simulationId
+ * @param {object} res - Express response object streaming the PDF buffer
+ * @returns {Promise<void|object>} Returns a file stream or a JSON error
+ */
 export async function downloadPDFReport(req, res) {
     const simulationId = parsePositiveInt(req.params.simulationId);
 
@@ -2646,6 +2697,14 @@ export async function downloadPDFReport(req, res) {
     }
 }
 
+/**
+ * Invokes the AI-driven remediation process for a specified simulation target.
+ * Executes actionable recommendations directly onto the affected infrastructure if allowed.
+ * 
+ * @param {object} req - Express request object containing simulationId
+ * @param {object} res - Express response object
+ * @returns {Promise<object>} JSON response with the execution outcome
+ */
 export async function remediateSimulation(req, res) {
     const simulationId = parsePositiveInt(req.params.simulationId);
 

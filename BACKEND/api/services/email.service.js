@@ -1,3 +1,9 @@
+/**
+ * Email Service
+ * 
+ * Provides functionality for sending out email notifications
+ * using Nodemailer.
+ */
 import { getMailConfig, isMailConfigured } from "../config/mail.config.js";
 
 let nodemailerModulePromise = null;
@@ -37,6 +43,17 @@ function buildTransportConfig(config) {
     return transport;
 }
 
+/**
+ * Sends an email message.
+ * 
+ * @param {Object} options - Email options.
+ * @param {string} options.to - Recipient email.
+ * @param {string} options.subject - Email subject.
+ * @param {string} [options.text] - Plain text content.
+ * @param {string} [options.html] - HTML content.
+ * @param {Array} [options.attachments] - Array of attachments.
+ * @returns {Promise<Object>} The mailer response.
+ */
 export async function sendEmailMessage({ to, subject, text, html, attachments = [] } = {}) {
     if (!to) {
         throw new Error("Email recipient is required");

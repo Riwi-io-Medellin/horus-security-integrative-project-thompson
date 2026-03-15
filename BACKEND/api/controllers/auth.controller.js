@@ -1,3 +1,9 @@
+/**
+ * Auth Controller
+ * 
+ * Handles user authentication flows, including login, registration,
+ * retrieving the current logged-in user details, and logout.
+ */
 import {
     authenticateUserCredentials,
     ensureAuthReady,
@@ -6,6 +12,12 @@ import {
 } from "../services/user.service.js";
 import { createSession, revokeSession } from "../services/session.service.js";
 
+/**
+ * Normalizes an error object into a generic structure.
+ * 
+ * @param {Error|object} error - The caught error object
+ * @returns {object} Normalized error with status, code, and message
+ */
 function normalizeError(error) {
     return {
         status: error?.status || 500,
@@ -14,6 +26,12 @@ function normalizeError(error) {
     };
 }
 
+/**
+ * Maps extensive user data to a sanitized client-friendly format.
+ * 
+ * @param {object} user - The extensive user database object
+ * @returns {object} Sanitized user object mapping
+ */
 function mapUserForClient(user) {
     return {
         id: user.id,
@@ -28,6 +46,13 @@ function mapUserForClient(user) {
     };
 }
 
+/**
+ * Authenticates a user and creates a session upon valid credentials.
+ * 
+ * @param {object} req - Express request containing login payload
+ * @param {object} res - Express response
+ * @returns {Promise<object>} JSON response with the user data and session token
+ */
 export async function login(req, res) {
     const identity = String(req.body?.username || req.body?.email || req.body?.user || "").trim();
     const password = String(req.body?.password || "");
@@ -68,6 +93,13 @@ export async function login(req, res) {
     }
 }
 
+/**
+ * Registers a new standard user in the system and signs them in immediately.
+ * 
+ * @param {object} req - Express request containing registration payload
+ * @param {object} res - Express response
+ * @returns {Promise<object>} JSON response with the newly created user data and session token
+ */
 export async function register(req, res) {
     const email = String(req.body?.email || "").trim();
     const username = String(req.body?.username || req.body?.user || "").trim();
@@ -102,6 +134,13 @@ export async function register(req, res) {
     }
 }
 
+/**
+ * Retrieves the currently logged-in user's profile information.
+ * 
+ * @param {object} req - Express request (requires active session token)
+ * @param {object} res - Express response
+ * @returns {Promise<object>} JSON response detailing the mapped client user payload
+ */
 export async function me(req, res) {
     try {
         await ensureAuthReady();
@@ -128,6 +167,13 @@ export async function me(req, res) {
     }
 }
 
+/**
+ * Revokes the provided active session, essentially logging out the user.
+ * 
+ * @param {object} req - Express request (requires active session token)
+ * @param {object} res - Express response
+ * @returns {Promise<object>} JSON response with confirmation message
+ */
 export async function logout(req, res) {
     revokeSession(req.authToken);
 

@@ -114,7 +114,6 @@ const scanProfileDefaults = {
 
 /**
  * EN: Parse and clamp integer env values.
-// o.
  */
 function parseIntegerEnv(name, fallback, min, max = Number.MAX_SAFE_INTEGER) {
     const raw = process.env[name];
@@ -132,7 +131,6 @@ function parseIntegerEnv(name, fallback, min, max = Number.MAX_SAFE_INTEGER) {
 
 /**
  * EN: Parse boolean env values with a safe fallback.
- // fallback seguro.
  */
 function parseBooleanEnv(name, fallback) {
     const raw = process.env[name];
@@ -153,7 +151,6 @@ function parseBooleanEnv(name, fallback) {
 
 /**
  * EN: Parse enum-like env vars.
-// um.
  */
 function parseEnumEnv(name, allowedValues, fallback) {
     const raw = process.env[name];
@@ -167,7 +164,6 @@ function parseEnumEnv(name, allowedValues, fallback) {
 
 /**
  * EN: Build effective Nmap scan policy from env vars and selected profile.
-// o y perfil.
  */
 function getScanPolicy() {
     const profile = parseEnumEnv("SCAN_PROFILE", ["fast", "balanced", "full"], "fast");
@@ -267,7 +263,6 @@ function getScanPolicy() {
 
 /**
  * EN: Build effective Hydra execution policy from env vars.
-// o.
  */
 function getHydraPolicy(scanPolicy) {
     const caps = scanPolicy.hydra_caps;
@@ -320,7 +315,6 @@ function summarizeHydraOutput(rawOutput) {
 
 /**
  * EN: Compute network and broadcast addresses from CIDR.
- // CIDR.
  */
 function getSubnetBoundaries(subnet) {
     try {
@@ -372,7 +366,6 @@ async function getArpMacByIp() {
 
 /**
  * EN: Detect local IPv4 interfaces and derive their CIDR subnet.
-// terfaces IPv4 locales y derivar su subred CIDR.
  */
 export function detectLocalNetwork() {
     const interfaces = networkInterfaces();
@@ -424,7 +417,6 @@ export function detectLocalNetwork() {
 
 /**
  * EN: Discover active hosts in a subnet using Nmap XML output.
-// do salida XML de Nmap.
  */
 function execCommandWithOutput(command, options) {
     return new Promise((resolve, reject) => {
@@ -560,7 +552,7 @@ async function resolveScannerRuntime(targetOrSubnet) {
         return {
             dockerNetwork,
             runtimeNetworkFlag: hostRuntimeFlag,
-            warning: `SCANNER_DOCKER_NETWORK=${dockerNetwork} no cubre ${targetOrSubnet}; se usara la red del host para este escaneo.`
+            warning: `SCANNER_DOCKER_NETWORK=${dockerNetwork} does not cover ${targetOrSubnet}; using host network for this scan.`
         };
     }
 
@@ -660,9 +652,9 @@ export async function discoverHosts(subnet) {
 
         if (extractRawHostsUp(fallbackPass.parsed) > 0) {
             parsed = fallbackPass.parsed;
-            warnings.push("La deteccion por ping no encontro hosts; se recuperaron resultados con un barrido por puertos abiertos.");
+            warnings.push("Ping detection found no hosts; retrieved results using an open ports sweep.");
         } else {
-            warnings.push("No se detectaron hosts ni por ping ni por el barrido de puertos abiertos del fallback.");
+            warnings.push("No hosts were detected via ping nor fallback open ports sweep.");
         }
     }
 
@@ -723,7 +715,7 @@ export async function discoverHosts(subnet) {
         if (likelyProxyResponses) {
             const filteredDevices = devices.filter(d => !isResetLikeReason(d.reason));
             if (filteredDevices.length !== devices.length) {
-                warnings.push("Posible red con NAT/proxy (como hotspot movil): respuestas RST masivas filtradas para reducir falsos positivos.");
+                warnings.push("Possible NAT/proxy network (e.g. mobile hotspot): massive RST responses filtered to reduce false positives.");
                 devices = filteredDevices;
             }
         }
@@ -735,11 +727,11 @@ export async function discoverHosts(subnet) {
         const hostsTotal = Number.parseInt(stats?.total ?? "0", 10);
 
         if (rawHostsUp > devices.length) {
-            warnings.push(`Nmap reporto ${rawHostsUp} hosts activos, pero tras filtrar respuestas ambiguas quedaron ${devices.length}.`);
+            warnings.push(`Nmap reported ${rawHostsUp} active hosts, but after filtering ambiguous responses, ${devices.length} remain.`);
         }
 
         if (devices.length === 0 && runtimeConfig.dockerNetwork && isPrivateIpv4Value(subnet) && !isSubnetOnLocalInterface(subnet)) {
-            warnings.push(`La subred ${subnet} no coincide con la red Docker configurada (${runtimeConfig.dockerNetwork}). Si es una red virtual distinta, ajusta SCANNER_DOCKER_NETWORK a la red correcta.`);
+            warnings.push(`Subnet ${subnet} does not match configured Docker network (${runtimeConfig.dockerNetwork}). If it's a different virtual network, adjust SCANNER_DOCKER_NETWORK.`);
         }
 
         const nmapCommandDisplay = executedCommands.length > 1
@@ -952,12 +944,10 @@ export async function runDeepScan(target) {
             warnings: scanWarnings
         };
     }
-    // ame.
     const address = host.address?.find(a => a.$.addrtype === "ipv4")?.$.addr || target;
     const macAddr = host.address?.find(a => a.$.addrtype === "mac");
     const hostname = host.hostnames?.[0]?.hostname?.[0]?.$.name || null;
     const hostState = host.status?.[0]?.$.state || "unknown";
-    // de sistema operativo.
     const osMatches = host.os?.[0]?.osmatch?.map(om => ({
         name: om.$.name,
         accuracy: Number.parseInt(om.$.accuracy, 10),
@@ -968,7 +958,6 @@ export async function runDeepScan(target) {
         cpe: om.osclass?.[0]?.cpe?.[0] || null
     })) || [];
     const bestOS = osMatches.length > 0 ? osMatches[0] : null;
-    // ormalizado.
     const ports = host.ports?.[0]?.port?.map(p => {
         const svc = p.service?.[0]?.$;
         const scripts = p.script?.map(s => ({
@@ -992,20 +981,18 @@ export async function runDeepScan(target) {
         };
     }) || [];
 
-    // EN/ES: Traceroute hops / Saltos de traceroute.
+    // EN: Traceroute hops.
     const traceroute = host.trace?.[0]?.hop?.map(h => ({
         ttl: h.$.ttl,
         ip: h.$.ipaddr || null,
         hostname: h.$.host || null,
         rtt: h.$.rtt || null
     })) || [];
-    // ).
     const hostScripts = host.hostscript?.[0]?.script?.map(s => ({
         id: s.$.id,
         output: s.$.output || s._ || ""
     })) || [];
-    // als from script output.
-    // erabilidad desde scripts.
+    // EN: Vulnerabilities from scripts.
     const vulnerabilities = [];
     const allScripts = [...hostScripts];
     ports.forEach(p => allScripts.push(...p.scripts));
@@ -1019,8 +1006,7 @@ export async function runDeepScan(target) {
             });
         }
     }
-    // auth services.
-    // abiertos y soportados.
+    // EN: Open and supported ports for auth services.
     const openPorts = ports.filter(p => p.state === "open");
     const hydraResults = [];
     const hydraCommands = [];
@@ -1042,7 +1028,7 @@ export async function runDeepScan(target) {
                 status: "skipped_disabled",
                 risk_score: 1,
                 details: null,
-                output_summary: "Hydra deshabilitado por politica"
+                output_summary: "Hydra disabled by policy"
             });
         });
     } else {
@@ -1056,7 +1042,7 @@ export async function runDeepScan(target) {
                 status: "skipped_service_limit",
                 risk_score: 1,
                 details: null,
-                output_summary: `Limite por escaneo alcanzado (${hydraPolicy.max_services_per_scan})`
+                output_summary: `Scan limit reached (${hydraPolicy.max_services_per_scan})`
             });
         });
 
@@ -1072,7 +1058,7 @@ export async function runDeepScan(target) {
                     status: "skipped_auto_stop",
                     risk_score: 1,
                     details: null,
-                    output_summary: `Hydra detenido automaticamente: ${hydraAutoStopReason}`
+                    output_summary: `Hydra stopped automatically: ${hydraAutoStopReason}`
                 });
                 continue;
             }
@@ -1086,13 +1072,12 @@ export async function runDeepScan(target) {
                     status: "skipped_cooldown",
                     risk_score: 1,
                     details: null,
-                    output_summary: `Cooldown activo (${remaining}s restantes)`
+                    output_summary: `Cooldown active (${remaining}s remaining)`
                 });
                 continue;
             }
 
             // EN: Generate only the first N user:password pairs for hard attempt caps.
-            // tos.
             const prepPairsCmd = `awk "NR==FNR{u[++n]=\\$0;next}{for(i=1;i<=n;i++)print u[i] \\\":\\\" \\$0}" /tools/users.txt /tools/passwords.txt | head -n ${hydraPolicy.max_attempts} > /tmp/hydra_pairs.txt`;
             const hydraCmd = `hydra -C /tmp/hydra_pairs.txt ${target} ${proto} -t ${hydraPolicy.tasks} -f -I`;
             const hydraDockerCmd = `docker run --rm --memory="512m" --cpus="1"${runtimeNetworkFlag} ${dockerImage} sh -lc '${prepPairsCmd} && ${hydraCmd}'`;
@@ -1177,8 +1162,6 @@ export async function runDeepScan(target) {
             });
         }
     }
-    // d cards.
-    // d.
     const networkInfo = {
         host_ip: address,
         hostname: hostname,
@@ -1203,7 +1186,7 @@ export async function runDeepScan(target) {
         nmap_version: nmapVersion,
         scan_time: elapsed,
         network_info: networkInfo,
-        ports: openPorts, // EN/ES: return open ports only / solo puertos abiertos
+        ports: openPorts, // EN: return open ports only
         os_detection: bestOS,
         traceroute,
         scripts: hostScripts,

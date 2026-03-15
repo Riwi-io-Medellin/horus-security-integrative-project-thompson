@@ -1,3 +1,8 @@
+/**
+ * Admin Routes
+ * 
+ * Defines the Express router for administrative user management endpoints.
+ */
 import express from "express";
 import { createUser, deleteUser, listUsers, updateUser } from "../controllers/admin.controller.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.middleware.js";

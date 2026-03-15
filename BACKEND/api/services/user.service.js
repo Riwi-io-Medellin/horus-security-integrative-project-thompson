@@ -1,3 +1,9 @@
+/**
+ * User Service
+ * 
+ * Manages user accounts, authentication, roles, and administrative
+ * user operations.
+ */
 import crypto from "crypto";
 import { execute, isDbEnabled, testDbConnection } from "../config/db.js";
 
@@ -344,7 +350,7 @@ async function setRoleForUser(userId, roleName) {
 
     const roleId = await ensureRole(
         roleName,
-        roleName === "admin" ? "Administrador del sistema" : "Usuario estandar"
+        roleName === "admin" ? "System Administrator" : "Standard User"
     );
 
     if (!roleId) {
@@ -500,6 +506,9 @@ async function getPublicUserByRow(row) {
     return toPublicUser(row, roles);
 }
 
+/**
+ * Ensures the database authentication schema is ready.
+ */
 export async function ensureAuthReady() {
     if (!isDbEnabled()) {
         throw makeError("Database persistence is disabled", 503, "DB_DISABLED");
@@ -515,16 +524,21 @@ export async function ensureAuthReady() {
 
     await ensureUsersSchema();
 
-    await ensureRole("admin", "Administrador del sistema").catch(() => {
+    await ensureRole("admin", "System Administrator").catch(() => {
         // no-op
     });
-    await ensureRole("user", "Usuario estandar").catch(() => {
+    await ensureRole("user", "Standard User").catch(() => {
         // no-op
     });
 
     await ensureDefaultAdminUser();
 }
 
+/**
+ * Ensures the default admin user exists in the database.
+ * 
+ * @returns {Promise<Object>} The default admin public user object.
+ */
 export async function ensureDefaultAdminUser() {
     const adminIdentity = normalizeIdentifier(DEFAULT_ADMIN_USERNAME);
 
@@ -534,7 +548,7 @@ export async function ensureDefaultAdminUser() {
         const [result] = await execute(
             `INSERT INTO Users (email, username, full_name, password_hash, is_active)
              VALUES (?, ?, ?, ?, 1)`,
-            [adminIdentity, adminIdentity, "Administrador", hashPassword(DEFAULT_ADMIN_PASSWORD)]
+            [adminIdentity, adminIdentity, "Administrator", hashPassword(DEFAULT_ADMIN_PASSWORD)]
         );
 
         adminRow = await getUserRowById(result.insertId);
@@ -551,7 +565,7 @@ export async function ensureDefaultAdminUser() {
 
         if (!adminRow.full_name) {
             updates.push("full_name = ?");
-            params.push("Administrador");
+            params.push("Administrator");
         }
 
         if (!adminRow.is_active) {
@@ -572,6 +586,14 @@ export async function ensureDefaultAdminUser() {
     return getPublicUserByRow(adminRow);
 }
 
+/**
+ * Authenticates user credentials.
+ * 
+ * @param {Object} credentials 
+ * @param {string} credentials.username
+ * @param {string} credentials.password
+ * @returns {Promise<Object|null>}
+ */
 export async function authenticateUserCredentials({ username, password }) {
     const normalizedUsername = normalizeIdentifier(username);
     const plainPassword = String(password || "");
@@ -596,6 +618,12 @@ export async function authenticateUserCredentials({ username, password }) {
     return getPublicUserByRow(updatedRow || row);
 }
 
+/**
+ * Registers a standard user.
+ * 
+ * @param {Object} userData 
+ * @returns {Promise<Object>}
+ */
 export async function registerStandardUser({ email, username, fullName, password }) {
     const normalizedEmail = validateEmail(email);
     const normalizedUsername = validateAccountUsername(username);
@@ -623,6 +651,12 @@ export async function registerStandardUser({ email, username, fullName, password
     return getPublicUserByRow(created);
 }
 
+/**
+ * Retrieves a public user profile by ID.
+ * 
+ * @param {number|string} userId 
+ * @returns {Promise<Object|null>}
+ */
 export async function getPublicUserById(userId) {
     const row = await getUserRowById(userId);
     if (!row) {
@@ -632,6 +666,13 @@ export async function getPublicUserById(userId) {
     return getPublicUserByRow(row);
 }
 
+/**
+ * Lists all users for administrative purposes.
+ * 
+ * @param {Object} [options]
+ * @param {boolean} [options.includeInactive]
+ * @returns {Promise<Array>}
+ */
 export async function listUsersForAdmin({ includeInactive = true } = {}) {
     const includeInactiveFlag = parseBoolean(includeInactive, true);
 
@@ -688,6 +729,13 @@ export async function listUsersForAdmin({ includeInactive = true } = {}) {
     );
 }
 
+/**
+ * Creates a new user with administrative privileges.
+ * 
+ * @param {Object} payload 
+ * @param {number|string} actorUserId 
+ * @returns {Promise<Object>}
+ */
 export async function createUserByAdmin(
     { email, username, fullName, password, isActive = true, isAdmin = false },
     actorUserId
@@ -738,6 +786,14 @@ export async function createUserByAdmin(
     return getPublicUserByRow(created);
 }
 
+/**
+ * Updates an existing user as an administrator.
+ * 
+ * @param {number|string} userId 
+ * @param {Object} payload 
+ * @param {number|string} actorUserId 
+ * @returns {Promise<Object>}
+ */
 export async function updateUserByAdmin(userId, payload = {}, actorUserId) {
     const targetId = Number.parseInt(String(userId ?? ""), 10);
     if (!Number.isFinite(targetId) || targetId <= 0) {
@@ -845,6 +901,13 @@ export async function updateUserByAdmin(userId, payload = {}, actorUserId) {
     return getPublicUserByRow(updated);
 }
 
+/**
+ * Deletes a user as an administrator.
+ * 
+ * @param {number|string} userId 
+ * @param {number|string} actorUserId 
+ * @returns {Promise<Object>}
+ */
 export async function deleteUserByAdmin(userId, actorUserId) {
     const targetId = Number.parseInt(String(userId ?? ""), 10);
     if (!Number.isFinite(targetId) || targetId <= 0) {

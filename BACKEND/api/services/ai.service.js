@@ -1,3 +1,9 @@
+/**
+ * AI Service
+ * 
+ * Provides services for generating, analyzing, and structuring AI reports
+ * and chat interactions based on simulation findings.
+ */
 import { getAIClient, getAIConfig, isAIConfigured, getAIProvider } from "../config/ai.config.js";
 import {
     buildSystemPrompt,

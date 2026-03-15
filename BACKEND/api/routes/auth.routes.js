@@ -1,3 +1,8 @@
+/**
+ * Authentication Routes
+ * 
+ * Defines the Express router for user authentication (login, register, logout, profile).
+ */
 import express from "express";
 import { login, logout, me, register } from "../controllers/auth.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";

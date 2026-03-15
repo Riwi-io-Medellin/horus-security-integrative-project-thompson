@@ -1,3 +1,8 @@
+/**
+ * Simulation Routes
+ * 
+ * Defines the Express router for network discovery and deep scan simulations.
+ */
 import express from "express";
 import { runDeepScan, discoverHosts, detectLocalNetwork } from "../services/docker.service.js";
 import { validateTarget, isAuthorizedTarget, validateSubnet, isPublicTarget } from "../utils/validators.js";
@@ -101,7 +106,7 @@ router.post("/discover", async (req, res) => {
     const cidrPrefix = Number.parseInt(subnet.split("/")[1], 10);
     if (cidrPrefix < 20) {
         return res.status(400).json({
-            error: `La subred /${cidrPrefix} es demasiado grande (${Math.pow(2, 32 - cidrPrefix).toLocaleString()} IPs). Usa /20 o mas pequeña (ej: /24 = 254 IPs). Usa el boton 'Auto-detectar' para obtener tu subred correcta.`
+            error: `The subnet /${cidrPrefix} is too large (${Math.pow(2, 32 - cidrPrefix).toLocaleString()} IPs). Use /20 or smaller (e.g., /24 = 254 IPs). Use the 'Auto-detect' button to get your correct subnet.`
         });
     }
 
